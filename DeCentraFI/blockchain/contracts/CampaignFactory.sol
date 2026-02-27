@@ -3,12 +3,17 @@ pragma solidity ^0.8.20;
 
 import "./Campaign.sol";
 
+error InvalidGoal();
+error InvalidDeadline();
+
 contract CampaignFactory {
     Campaign[] public campaigns;
 
     event CampaignCreated(address indexed campaign, address indexed creator, uint256 goal, uint256 deadline);
 
     function createCampaign(uint256 _goal, uint256 _deadline) external returns (address) {
+        if (_goal == 0) revert InvalidGoal();
+        if (_deadline <= block.timestamp) revert InvalidDeadline();
         Campaign campaign = new Campaign(msg.sender, _goal, _deadline);
         campaigns.push(campaign);
         emit CampaignCreated(address(campaign), msg.sender, _goal, _deadline);

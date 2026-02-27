@@ -45,4 +45,12 @@ describe("Campaign", function () {
     const balanceAfter = await ethers.provider.getBalance(owner.address);
     expect(balanceAfter).to.equal(balanceBefore + ethers.parseEther("10") - gasUsed);
   });
+
+  it("should revert contribute when campaign has ended", async function () {
+    await ethers.provider.send("evm_increaseTime", [deadlineOffset + 1]);
+    await ethers.provider.send("evm_mine", []);
+    await expect(
+      campaign.connect(contributor1).contribute({ value: ethers.parseEther("1") })
+    ).to.be.revertedWithCustomError(campaign, "CampaignEnded");
+  });
 });

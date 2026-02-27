@@ -1,17 +1,25 @@
+import { useState, useEffect } from "react";
 import { useAccount, useConnect, useDisconnect, useSwitchChain } from "wagmi";
 import { sepolia } from "wagmi/chains";
+import { getConnectionErrorMessage } from "../utils/errorMessages";
 
 export function WalletConnectButton() {
   const { address, isConnected, chainId } = useAccount();
-  const { connect, connectors, isPending } = useConnect();
+  const { connect, connectors, isPending, error: connectError } = useConnect();
   const { disconnect } = useDisconnect();
   const { switchChain, isPending: isSwitchPending } = useSwitchChain();
+  const [dismissedError, setDismissedError] = useState(false);
 
   const isWrongNetwork = isConnected && chainId !== undefined && chainId !== sepolia.id;
+  const hasNoWallet = connectors.length === 0;
+
+  useEffect(() => {
+    if (connectError) setDismissedError(false);
+  }, [connectError]);
 
   if (isConnected && address) {
     return (
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         {isWrongNetwork && switchChain && (
           <button
             type="button"
@@ -22,7 +30,7 @@ export function WalletConnectButton() {
             {isSwitchPending ? "Switching…" : "Switch to Sepolia"}
           </button>
         )}
-        <span className="text-sm text-gray-600 font-mono">
+        <span className="text-sm text-gray-600 font-mono" title={address}>
           {address.slice(0, 6)}…{address.slice(-4)}
         </span>
         <button
@@ -36,8 +44,38 @@ export function WalletConnectButton() {
     );
   }
 
+  if (hasNoWallet) {
+    return (
+      <div className="text-sm text-amber-700 bg-amber-50 px-3 py-2 rounded" role="status">
+        No wallet found. Install{" "}
+        <a
+          href="https://metamask.io"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline"
+        >
+          MetaMask
+        </a>{" "}
+        or use a Web3-enabled browser.
+      </div>
+    );
+  }
+
   return (
-    <>
+    <div className="flex items-center gap-2 flex-wrap">
+      {connectError && !dismissedError && (
+        <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 px-2 py-1 rounded">
+          <span>{getConnectionErrorMessage(connectError)}</span>
+          <button
+            type="button"
+            onClick={() => setDismissedError(true)}
+            className="text-red-700 hover:underline"
+            aria-label="Dismiss"
+          >
+            ×
+          </button>
+        </div>
+      )}
       {connectors.map((connector) => (
         <button
           key={connector.uid}
@@ -49,6 +87,6 @@ export function WalletConnectButton() {
           {isPending ? "Connecting…" : `Connect ${connector.name}`}
         </button>
       ))}
-    </>
+    </div>
   );
 }

@@ -1,5 +1,16 @@
 const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
 
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public status: number,
+    public body?: unknown
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
 export interface CampaignMeta {
   id: number;
   title: string;
@@ -26,18 +37,48 @@ export async function createCampaign(data: {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) {
+    const text = await res.text();
+    let message = text;
+    try {
+      const json = JSON.parse(text) as { error?: string };
+      if (json.error) message = json.error;
+    } catch {
+      // use raw text
+    }
+    throw new ApiError(message, res.status, text);
+  }
   return res.json() as Promise<CampaignMeta>;
 }
 
 export async function getCampaigns(): Promise<CampaignMeta[]> {
   const res = await fetch(`${API_BASE}/api/campaigns`);
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) {
+    const text = await res.text();
+    let message = text;
+    try {
+      const json = JSON.parse(text) as { error?: string };
+      if (json.error) message = json.error;
+    } catch {
+      //
+    }
+    throw new ApiError(message, res.status);
+  }
   return res.json();
 }
 
 export async function getCampaign(id: string): Promise<CampaignMeta> {
   const res = await fetch(`${API_BASE}/api/campaigns/${id}`);
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) {
+    const text = await res.text();
+    let message = text;
+    try {
+      const json = JSON.parse(text) as { error?: string };
+      if (json.error) message = json.error;
+    } catch {
+      //
+    }
+    throw new ApiError(message, res.status);
+  }
   return res.json();
 }
