@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Navbar } from './components/Navbar'
 import { Home } from './pages/Home'
 import { CreateCampaign } from './pages/CreateCampaign'
+import { CampaignDetail } from './pages/CampaignDetail'
 
 function App() {
   return (
@@ -11,6 +12,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/create" element={<CreateCampaign />} />
+          <Route path="/campaigns/:id" element={<CampaignDetail />} />
         </Routes>
       </main>
     </BrowserRouter>

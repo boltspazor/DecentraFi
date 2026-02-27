@@ -19,6 +19,12 @@ export function getTransactionErrorMessage(error: unknown): string {
   if (msg.includes("InvalidDeadline")) {
     return "Deadline must be in the future.";
   }
+  if (msg.includes("ZeroContribution")) {
+    return "Contribution amount must be greater than zero.";
+  }
+  if (msg.includes("AlreadyWithdrawn")) {
+    return "Funds have already been withdrawn.";
+  }
   if (msg.includes("network") || msg.includes("chain")) {
     return "Network error. Please switch to Sepolia and try again.";
   }

@@ -9,6 +9,8 @@ export interface CampaignRow {
   creator: string;
   campaign_address: string;
   tx_hash: string | null;
+  total_raised?: string;
+  status?: string;
   created_at: Date;
 }
 
@@ -68,4 +70,15 @@ export async function findByCampaignAddress(
     [campaignAddress.toLowerCase()]
   );
   return (result.rows[0] as CampaignRow) || null;
+}
+
+export async function updateTotalRaisedAndStatus(
+  campaignId: number,
+  totalRaised: string,
+  status: string
+): Promise<void> {
+  await pool.query(
+    "UPDATE campaigns SET total_raised = $1, status = $2 WHERE id = $3",
+    [totalRaised, status, campaignId]
+  );
 }

@@ -6,5 +6,6 @@ const router = Router()
 router.post('/', campaignController.createCampaign)
 router.get('/', campaignController.getCampaigns)
 router.get('/:id', campaignController.getCampaign)
+router.patch('/:id/status', campaignController.patchCampaignStatus)
 
 export default router

@@ -9,19 +9,23 @@ contract Campaign is ReentrancyGuard {
     uint256 public deadline;
     uint256 public totalContributed;
     bool public closed;
+    bool public fundsWithdrawn;
     mapping(address => uint256) public contributions;
 
     event Contributed(address indexed contributor, uint256 amount);
+    event ContributionReceived(address indexed contributor, uint256 amount);
     event Withdrawal(address indexed creator, uint256 amount);
     event Refund(address indexed contributor, uint256 amount);
     event CampaignClosed(bool goalReached);
 
+    error ZeroContribution();
     error CampaignEnded();
     error GoalReached();
     error GoalNotReached();
     error NotCreator();
     error NoContribution();
     error TransferFailed();
+    error AlreadyWithdrawn();
 
     constructor(address _creator, uint256 _goal, uint256 _deadline) {
         creator = _creator;
@@ -30,6 +34,7 @@ contract Campaign is ReentrancyGuard {
     }
 
     function contribute() external payable nonReentrant {
+        if (msg.value == 0) revert ZeroContribution();
         if (block.timestamp >= deadline) revert CampaignEnded();
         if (closed) revert GoalReached();
         contributions[msg.sender] += msg.value;
@@ -39,13 +44,27 @@ contract Campaign is ReentrancyGuard {
             emit CampaignClosed(true);
         }
         emit Contributed(msg.sender, msg.value);
+        emit ContributionReceived(msg.sender, msg.value);
     }
 
+    function withdrawFunds() external nonReentrant {
+        if (msg.sender != creator) revert NotCreator();
+        if (!closed) revert GoalNotReached();
+        if (fundsWithdrawn) revert AlreadyWithdrawn();
+        uint256 amount = address(this).balance;
+        fundsWithdrawn = true;
+        (bool ok,) = payable(creator).call{value: amount}("");
+        if (!ok) revert TransferFailed();
+        emit Withdrawal(creator, amount);
+    }
+
+    /// @dev Legacy alias for withdrawFunds (creator withdraws when goal reached)
     function withdraw() external nonReentrant {
         if (msg.sender != creator) revert NotCreator();
         if (!closed) revert GoalNotReached();
+        if (fundsWithdrawn) revert AlreadyWithdrawn();
         uint256 amount = address(this).balance;
-        closed = true;
+        fundsWithdrawn = true;
         (bool ok,) = payable(creator).call{value: amount}("");
         if (!ok) revert TransferFailed();
         emit Withdrawal(creator, amount);
