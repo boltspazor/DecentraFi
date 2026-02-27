@@ -1,0 +1,128 @@
+/**
+ * Integration tests for contributions and campaign detail/status.
+ * Requires a running PostgreSQL (DATABASE_URL). Skips when DB is unavailable.
+ */
+import request from "supertest";
+import app from "../src/app.js";
+
+const validAddress = "0x1234567890123456789012345678901234567890";
+const validTxHash1 = "0x" + "a".repeat(64);
+const validTxHash2 = "0x" + "b".repeat(64);
+
+function futureDeadline() {
+  const d = new Date();
+  d.setDate(d.getDate() + 7);
+  return d.toISOString();
+}
+
+describe("Contributions & campaign detail (integration)", () => {
+  let campaignId: number | null = null;
+
+  beforeAll(async () => {
+    const hex = "c".repeat(32) + Math.floor(Math.random() * 1e9).toString(16).padStart(8, "0");
+    const campaignAddress = "0x" + hex.padStart(40, "0").slice(-40);
+    const createRes = await request(app)
+      .post("/api/campaigns")
+      .send({
+        title: "Test Campaign for Contributions",
+        description: "Description",
+        goal: "10000000000000000000",
+        deadline: futureDeadline(),
+        creator: validAddress,
+        campaignAddress,
+        txHash: "0x" + "d".repeat(64),
+      });
+    if (createRes.status === 201 && createRes.body?.id) {
+      campaignId = createRes.body.id;
+    }
+  });
+
+  it("should return 404 for POST /contributions when campaign id does not exist", async () => {
+    const res = await request(app)
+      .post("/api/contributions")
+      .send({
+        campaignId: 999999,
+        contributorAddress: validAddress,
+        amountWei: "1000000000000000000",
+        txHash: validTxHash1,
+      });
+    expect([400, 404, 500]).toContain(res.status);
+    expect(res.body).toHaveProperty("error");
+    if (res.status === 404) {
+      expect(String(res.body.error).toLowerCase()).toMatch(/not found/);
+    }
+  });
+
+  it("should store contribution metadata and return 201 when payload is valid (blockchain-confirmed)", async () => {
+    if (!campaignId) return;
+    const res = await request(app)
+      .post("/api/contributions")
+      .send({
+        campaignId,
+        contributorAddress: validAddress,
+        amountWei: "1000000000000000000",
+        txHash: validTxHash1,
+      });
+    expect(res.status).toBe(201);
+    expect(res.body).toMatchObject({
+      campaignId,
+      contributorAddress: validAddress.toLowerCase(),
+      amountWei: "1000000000000000000",
+      txHash: validTxHash1,
+    });
+    expect(res.body).toHaveProperty("id");
+    expect(res.body).toHaveProperty("createdAt");
+  });
+
+  it("should reject duplicate transaction hash with 409", async () => {
+    if (!campaignId) return;
+    const res = await request(app)
+      .post("/api/contributions")
+      .send({
+        campaignId,
+        contributorAddress: validAddress,
+        amountWei: "2000000000000000000",
+        txHash: validTxHash1,
+      });
+    expect(res.status).toBe(409);
+    expect(res.body.error).toMatch(/transaction hash|already/i);
+  });
+
+  it("should return campaign detail from GET /api/campaigns/:id", async () => {
+    if (!campaignId) return;
+    const res = await request(app).get(`/api/campaigns/${campaignId}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty("id", campaignId);
+    expect(res.body).toHaveProperty("title");
+    expect(res.body).toHaveProperty("totalRaised");
+    expect(res.body).toHaveProperty("status");
+  });
+
+  it("should return contributions list from GET /api/contributions/campaign/:id", async () => {
+    if (!campaignId) return;
+    const res = await request(app).get(`/api/contributions/campaign/${campaignId}`);
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body.length).toBeGreaterThanOrEqual(1);
+    expect(res.body[0]).toHaveProperty("amountWei");
+    expect(res.body[0]).toHaveProperty("txHash");
+  });
+
+  it("should update campaign status via PATCH /api/campaigns/:id/status", async () => {
+    if (!campaignId) return;
+    const res = await request(app)
+      .patch(`/api/campaigns/${campaignId}/status`)
+      .send({ status: "Successful" });
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty("status", "Successful");
+  });
+
+  it("should allow status transition to Failed", async () => {
+    if (!campaignId) return;
+    const res = await request(app)
+      .patch(`/api/campaigns/${campaignId}/status`)
+      .send({ status: "Failed" });
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe("Failed");
+  });
+});

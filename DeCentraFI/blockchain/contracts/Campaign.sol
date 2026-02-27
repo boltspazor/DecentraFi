@@ -86,6 +86,6 @@ contract Campaign is ReentrancyGuard {
     }
 
     receive() external payable {
-        contribute();
+        this.contribute{value: msg.value}();
     }
 }
