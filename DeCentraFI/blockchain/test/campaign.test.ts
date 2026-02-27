@@ -6,13 +6,12 @@ describe("Campaign", function () {
   let factory;
   let owner;
   let contributor1;
-  let contributor2;
 
   const goal = ethers.parseEther("10");
   const deadlineOffset = 60 * 60 * 24 * 7; // 7 days
 
   beforeEach(async function () {
-    [owner, contributor1, contributor2] = await ethers.getSigners();
+    [owner, contributor1] = await ethers.getSigners();
     const CampaignFactory = await ethers.getContractFactory("CampaignFactory");
     factory = await CampaignFactory.deploy();
     await factory.waitForDeployment();

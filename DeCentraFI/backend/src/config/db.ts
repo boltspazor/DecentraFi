@@ -11,10 +11,8 @@ export const pool = new Pool({ connectionString });
 export async function connectDb(): Promise<void> {
   const client = await pool.connect();
   try {
-/**
- * Creates campaigns table. For existing databases that lack the unique constraint
- * on campaign_address, run: ALTER TABLE campaigns ADD CONSTRAINT campaigns_campaign_address_key UNIQUE (campaign_address);
- */
+    // For existing DBs missing UNIQUE on campaign_address, run:
+    // ALTER TABLE campaigns ADD CONSTRAINT campaigns_campaign_address_key UNIQUE (campaign_address);
     await client.query(`
       CREATE TABLE IF NOT EXISTS campaigns (
         id SERIAL PRIMARY KEY,

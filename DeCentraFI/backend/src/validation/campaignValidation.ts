@@ -115,28 +115,6 @@ export interface CreateCampaignBody {
   txHash?: unknown;
 }
 
-export function validateCreateCampaignBody(body: CreateCampaignBody): { valid: true; data: Record<string, string> } | { valid: false; statusCode: number; error: string } {
-  const titleR = validateTitle(body.title);
-  if (!titleR.valid) return { valid: false, statusCode: 400, error: titleR.error! };
-
-  const descR = validateDescription(body.description);
-  if (!descR.valid) return { valid: false, statusCode: 400, error: descR.error! };
-
-  const goalR = validateGoal(body.goal);
-  if (!goalR.valid) return { valid: false, statusCode: 400, error: goalR.error! };
-
-  const deadlineR = validateDeadline(body.deadline);
-  if (!deadlineR.valid) return { valid: false, statusCode: 400, error: deadlineR.error! };
-
-  const creatorR = validateEthAddress(body.creator);
-  if (!creatorR.valid) return { valid: false, statusCode: 400, error: creatorR.error! };
-
-  const addrR = validateEthAddress(body.campaignAddress);
-  if (!addrR.valid) return { valid: false, statusCode: 400, error: addrR.error! };
-
-  const txR = validateTxHash(body.txHash);
-  if (!txR.valid) return { valid: false, statusCode: 400, error: txR.error! };
-
 export function validateCreateCampaignBody(body: CreateCampaignBody): { valid: true; data: { title: string; description: string; goal: string; deadline: string; creator: string; campaignAddress: string; txHash?: string } } | { valid: false; statusCode: number; error: string } {
   const titleR = validateTitle(body.title);
   if (!titleR.valid) return { valid: false, statusCode: 400, error: titleR.error! };

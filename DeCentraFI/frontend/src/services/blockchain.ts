@@ -1,6 +1,5 @@
 import { getContract } from "viem";
 import {
-  useAccount,
   usePublicClient,
   useWalletClient,
   useWriteContract,
@@ -13,7 +12,6 @@ import { campaignFactoryAbi } from "../abis/campaignFactory";
 const factoryAddress = (import.meta.env.VITE_CAMPAIGN_FACTORY_ADDRESS || "") as `0x${string}`;
 
 export function useCampaignFactory() {
-  const { address } = useAccount();
   const publicClient = usePublicClient({ chainId: sepolia.id });
   const { data: walletClient } = useWalletClient({ chainId: sepolia.id });
   const {
