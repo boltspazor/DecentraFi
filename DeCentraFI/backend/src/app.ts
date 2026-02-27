@@ -1,6 +1,6 @@
 import express from 'express'
 import cors from 'cors'
-import campaignRoutes from './routes/campaignRoutes'
+import campaignRoutes from './routes/campaignRoutes.js'
 
 const app = express()
 

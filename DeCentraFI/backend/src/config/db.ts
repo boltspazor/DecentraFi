@@ -1,7 +1,30 @@
-import mongoose from 'mongoose'
+import pg from "pg";
 
-const uri = process.env.MONGODB_URI ?? 'mongodb://localhost:27017/decentrafi'
+const { Pool } = pg;
 
-export async function connectDb(): Promise<typeof mongoose> {
-  return mongoose.connect(uri)
+const connectionString =
+  process.env.DATABASE_URL ||
+  "postgresql://localhost:5432/decentrafi";
+
+export const pool = new Pool({ connectionString });
+
+export async function connectDb(): Promise<void> {
+  const client = await pool.connect();
+  try {
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS campaigns (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        description TEXT NOT NULL,
+        goal VARCHAR(78) NOT NULL,
+        deadline TIMESTAMPTZ NOT NULL,
+        creator VARCHAR(42) NOT NULL,
+        campaign_address VARCHAR(42) NOT NULL,
+        tx_hash VARCHAR(66),
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+  } finally {
+    client.release();
+  }
 }

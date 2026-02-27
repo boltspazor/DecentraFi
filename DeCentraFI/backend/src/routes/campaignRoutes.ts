@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import * as campaignController from '../controllers/campaignController'
+import * as campaignController from '../controllers/campaignController.js'
 
 const router = Router()
 

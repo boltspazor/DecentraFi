@@ -1,29 +1,82 @@
-import { getContract } from 'viem'
-import { usePublicClient, useWalletClient } from 'wagmi'
+import { getContract } from "viem";
+import {
+  useAccount,
+  usePublicClient,
+  useWalletClient,
+  useWriteContract,
+  useWaitForTransactionReceipt,
+} from "wagmi";
+import { sepolia } from "wagmi/chains";
+import { decodeEventLog } from "viem";
+import { campaignFactoryAbi } from "../abis/campaignFactory";
 
-// Update with your deployed contract ABI and address
-const CAMPAIGN_FACTORY_ABI = [] as const
-const CAMPAIGN_FACTORY_ADDRESS = '0x0000000000000000000000000000000000000000' as const
+const factoryAddress = (import.meta.env.VITE_CAMPAIGN_FACTORY_ADDRESS || "") as `0x${string}`;
 
 export function useCampaignFactory() {
-  const publicClient = usePublicClient()
-  const { data: walletClient } = useWalletClient()
+  const { address } = useAccount();
+  const publicClient = usePublicClient({ chainId: sepolia.id });
+  const { data: walletClient } = useWalletClient({ chainId: sepolia.id });
+  const {
+    writeContract,
+    data: hash,
+    isPending,
+    error,
+    reset,
+  } = useWriteContract();
 
-  const factoryContract = publicClient
-    ? getContract({
-        address: CAMPAIGN_FACTORY_ADDRESS,
-        abi: CAMPAIGN_FACTORY_ABI,
-        client: { public: publicClient, wallet: walletClient ?? undefined },
-      })
-    : null
+  const { isLoading: isConfirming, isSuccess, data: receipt } = useWaitForTransactionReceipt({ hash });
 
-  return { contract: factoryContract, publicClient, walletClient }
-}
+  const contract =
+    publicClient && factoryAddress && factoryAddress !== "0x"
+      ? getContract({
+          address: factoryAddress,
+          abi: campaignFactoryAbi,
+          client: { public: publicClient, wallet: walletClient ?? undefined },
+        })
+      : null;
 
-export async function createCampaignOnChain(
-  walletClient: NonNullable<ReturnType<typeof useWalletClient>['data']>,
-  args: { goal: bigint; deadline: bigint }
-): Promise<`0x${string}` | undefined> {
-  // TODO: encode and send createCampaign tx using CampaignFactory
-  return undefined
+  function createCampaign(goalWei: bigint, deadlineUnix: bigint) {
+    if (!factoryAddress || factoryAddress === "0x") {
+      throw new Error("VITE_CAMPAIGN_FACTORY_ADDRESS is not set");
+    }
+    writeContract({
+      address: factoryAddress,
+      abi: campaignFactoryAbi,
+      functionName: "createCampaign",
+      args: [goalWei, deadlineUnix],
+      chainId: sepolia.id,
+    });
+  }
+
+  function getCampaignAddressFromReceipt(): `0x${string}` | null {
+    if (!receipt || !receipt.logs.length) return null;
+    for (const log of receipt.logs) {
+      try {
+        const decoded = decodeEventLog({
+          abi: campaignFactoryAbi,
+          data: log.data,
+          topics: log.topics,
+        });
+        if (decoded.eventName === "CampaignCreated" && "campaign" in decoded.args) {
+          return decoded.args.campaign as `0x${string}`;
+        }
+      } catch {
+        continue;
+      }
+    }
+    return null;
+  }
+
+  return {
+    contract,
+    createCampaign,
+    hash,
+    isPending: isPending || isConfirming,
+    isSuccess,
+    error,
+    reset,
+    getCampaignAddressFromReceipt,
+    receipt,
+    factoryAddress: factoryAddress && factoryAddress !== "0x" ? factoryAddress : null,
+  };
 }

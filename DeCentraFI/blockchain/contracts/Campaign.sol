@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-contract Campaign {
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+
+contract Campaign is ReentrancyGuard {
     address public creator;
     uint256 public goal;
     uint256 public deadline;
@@ -27,7 +29,7 @@ contract Campaign {
         deadline = _deadline;
     }
 
-    function contribute() external payable {
+    function contribute() external payable nonReentrant {
         if (block.timestamp >= deadline) revert CampaignEnded();
         if (closed) revert GoalReached();
         contributions[msg.sender] += msg.value;
@@ -39,7 +41,7 @@ contract Campaign {
         emit Contributed(msg.sender, msg.value);
     }
 
-    function withdraw() external {
+    function withdraw() external nonReentrant {
         if (msg.sender != creator) revert NotCreator();
         if (!closed) revert GoalNotReached();
         uint256 amount = address(this).balance;
@@ -49,7 +51,7 @@ contract Campaign {
         emit Withdrawal(creator, amount);
     }
 
-    function refund() external {
+    function refund() external nonReentrant {
         if (block.timestamp < deadline && !closed) revert GoalNotReached();
         uint256 amount = contributions[msg.sender];
         if (amount == 0) revert NoContribution();

@@ -1,14 +1,18 @@
-import { http, createConfig } from 'wagmi'
-import { mainnet, sepolia, hardhat } from 'wagmi/chains'
+import { http, createConfig } from "wagmi";
+import { sepolia } from "wagmi/chains";
+import { injected, walletConnect } from "wagmi/connectors";
 
-const chainId = Number(import.meta.env.VITE_CHAIN_ID ?? 31337)
-const rpcUrl = import.meta.env.VITE_RPC_URL
-
-const chain = chainId === 31337 ? hardhat : chainId === 11155111 ? sepolia : mainnet
+const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || "";
+const rpcUrl = import.meta.env.VITE_RPC_URL;
 
 export const config = createConfig({
-  chains: [chain],
+  chains: [sepolia],
+  connectors: [
+    injected({ target: "metaMask" }),
+    ...(projectId ? [walletConnect({ projectId })] : []),
+  ],
   transports: {
-    [chain.id]: http(rpcUrl ?? undefined),
+    [sepolia.id]: http(rpcUrl || undefined),
   },
-})
+  ssr: false,
+});

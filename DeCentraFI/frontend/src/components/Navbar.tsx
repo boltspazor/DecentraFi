@@ -1,23 +1,24 @@
-import { Link } from 'react-router-dom'
-import { WalletConnectButton } from './WalletConnectButton'
+import { Link } from "react-router-dom";
+import { WalletConnectButton } from "./WalletConnectButton";
 
 export function Navbar() {
   return (
-    <nav style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      padding: '1rem 2rem',
-      borderBottom: '1px solid #eee',
-    }}>
-      <Link to="/" style={{ textDecoration: 'none', fontWeight: 600, fontSize: '1.25rem' }}>
+    <nav className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-white">
+      <Link
+        to="/"
+        className="text-xl font-semibold text-gray-900 hover:text-indigo-600"
+      >
         DecentraFI
       </Link>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-        <Link to="/">Home</Link>
-        <Link to="/create">Create Campaign</Link>
+      <div className="flex items-center gap-6">
+        <Link to="/" className="text-gray-600 hover:text-gray-900">
+          Home
+        </Link>
+        <Link to="/create" className="text-gray-600 hover:text-gray-900">
+          Create Campaign
+        </Link>
         <WalletConnectButton />
       </div>
     </nav>
-  )
+  );
 }

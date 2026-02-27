@@ -1,48 +1,63 @@
-import mongoose from 'mongoose'
+import { pool } from "../config/db.js";
 
-export interface ICampaign {
-  title: string
-  description: string
-  goal: string
-  deadline: Date
-  creator: string
-  txHash?: string
-  createdAt: Date
+export interface CampaignRow {
+  id: number;
+  title: string;
+  description: string;
+  goal: string;
+  deadline: Date;
+  creator: string;
+  campaign_address: string;
+  tx_hash: string | null;
+  created_at: Date;
 }
-
-const campaignSchema = new mongoose.Schema<ICampaign>(
-  {
-    title: { type: String, required: true },
-    description: { type: String, required: true },
-    goal: { type: String, required: true },
-    deadline: { type: Date, required: true },
-    creator: { type: String, required: true },
-    txHash: { type: String },
-  },
-  { timestamps: true }
-)
-
-export const Campaign = mongoose.model<ICampaign>('Campaign', campaignSchema)
 
 export async function create(data: {
-  title: string
-  description: string
-  goal: string
-  deadline: string
-  creator: string
-  txHash?: string
-}) {
-  const campaign = new Campaign({
-    ...data,
-    deadline: new Date(data.deadline),
-  })
-  return campaign.save()
+  title: string;
+  description: string;
+  goal: string;
+  deadline: string;
+  creator: string;
+  campaignAddress: string;
+  txHash?: string;
+}): Promise<CampaignRow> {
+  const result = await pool.query(
+    `INSERT INTO campaigns (title, description, goal, deadline, creator, campaign_address, tx_hash)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     RETURNING *`,
+    [
+      data.title,
+      data.description,
+      data.goal,
+      new Date(data.deadline),
+      data.creator,
+      data.campaignAddress,
+      data.txHash ?? null,
+    ]
+  );
+  return result.rows[0] as CampaignRow;
 }
 
-export async function findAll() {
-  return Campaign.find().sort({ createdAt: -1 }).lean()
+export async function findAll(): Promise<CampaignRow[]> {
+  const result = await pool.query(
+    "SELECT * FROM campaigns ORDER BY created_at DESC"
+  );
+  return result.rows as CampaignRow[];
 }
 
-export async function findById(id: string) {
-  return Campaign.findById(id).lean()
+export async function findById(id: string): Promise<CampaignRow | null> {
+  const result = await pool.query("SELECT * FROM campaigns WHERE id = $1", [
+    id,
+  ]);
+  return (result.rows[0] as CampaignRow) || null;
+}
+
+export async function findByCampaignAddress(
+  campaignAddress: string
+): Promise<CampaignRow | null> {
+  const result = await pool.query(
+    "SELECT * FROM campaigns WHERE campaign_address = $1",
+    [campaignAddress.toLowerCase()]
+  );
+  return (result.rows[0] as CampaignRow) || null;
 }
