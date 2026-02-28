@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { useAccount, useSwitchChain } from "wagmi";
 import { sepolia } from "wagmi/chains";
 import { useCampaign, useContribute, useWithdraw } from "../services/campaignContract";
@@ -10,7 +10,6 @@ const SEPOLIA_ETHERSCAN_TX = "https://sepolia.etherscan.io/tx/";
 
 export function CampaignDetail() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const { address, isConnected, chainId } = useAccount();
   const { switchChain } = useSwitchChain();
 
