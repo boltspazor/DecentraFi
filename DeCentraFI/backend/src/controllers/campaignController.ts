@@ -56,6 +56,7 @@ export async function getCampaign(req: Request, res: Response) {
     }
     const contributors = await contributionService.findByCampaignId(numId);
     const payload = formatCampaign(campaign);
+    /** Response shape: campaign (camelCase, dates ISO) + contributors[] (camelCase) for frontend alignment. */
     return res.json({
       ...payload,
       contributors: contributors.map((c) => ({
@@ -95,6 +96,7 @@ export async function patchCampaignStatus(req: Request, res: Response) {
 }
 
 function formatCampaign(row: campaignService.CampaignRow) {
+  /** API contract: camelCase; dates serialized as ISO by res.json(); wei as string. */
   return {
     id: row.id,
     title: row.title,

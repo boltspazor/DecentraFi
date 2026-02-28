@@ -115,9 +115,15 @@ export function CampaignDetail() {
       .getCampaign(id)
       .then((c) => {
         setCampaignMeta(c);
+        if (Array.isArray(c.contributors) && c.contributors.length >= 0) {
+          setContributions(c.contributors);
+        }
+        if (Array.isArray(c.contributors)) return null;
         return api.getContributionsByCampaign(c.id);
       })
-      .then((list) => setContributions(list))
+      .then((list) => {
+        if (Array.isArray(list)) setContributions(list);
+      })
       .catch((e) => setErrorMeta(e instanceof Error ? e.message : "Failed to load campaign"))
       .finally(() => setLoadingMeta(false));
   }, [id]);

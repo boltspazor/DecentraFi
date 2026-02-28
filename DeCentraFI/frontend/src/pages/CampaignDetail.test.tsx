@@ -284,4 +284,87 @@ describe("CampaignDetail", () => {
       expect(screen.getByText(/rejected/i)).toBeInTheDocument();
     });
   });
+
+  it("does not render contribution form when campaign is expired", async () => {
+    const { useCampaign } = await import("../services/campaignContract");
+    const pastDeadline = BigInt(Math.floor(Date.now() / 1000) - 3600);
+    vi.mocked(useCampaign).mockReturnValue({
+      goal: BigInt("10000000000000000000"),
+      deadline: pastDeadline,
+      totalContributed: BigInt("3000000000000000000"),
+      totalRaised: BigInt("3000000000000000000"),
+      closed: false,
+      fundsWithdrawn: false,
+      fundsReleased: false,
+      refundEnabled: false,
+      finalized: false,
+      creator: "0xcreator0000000000000000000000000000000001",
+      myContribution: 0n,
+      refetch: vi.fn(),
+    } as never);
+    renderCampaignDetail();
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: /test campaign/i })).toBeInTheDocument();
+    });
+    expect(screen.queryByLabelText(/amount \(eth\)/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /contribute/i })).not.toBeInTheDocument();
+  });
+
+  it("shows refund button only when refundEnabled and user has contribution", async () => {
+    const { useCampaign } = await import("../services/campaignContract");
+    const pastDeadline = BigInt(Math.floor(Date.now() / 1000) - 3600);
+    vi.mocked(useCampaign).mockReturnValue({
+      goal: BigInt("10000000000000000000"),
+      deadline: pastDeadline,
+      totalContributed: BigInt("2000000000000000000"),
+      totalRaised: BigInt("2000000000000000000"),
+      closed: false,
+      fundsWithdrawn: false,
+      fundsReleased: false,
+      refundEnabled: true,
+      finalized: true,
+      creator: "0xcreator0000000000000000000000000000000001",
+      myContribution: BigInt("1000000000000000000"),
+      refetch: vi.fn(),
+    } as never);
+    renderCampaignDetail();
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /claim refund/i })).toBeInTheDocument();
+    });
+    expect(screen.getByText(/your contribution:/i)).toBeInTheDocument();
+  });
+
+  it("does not crash when getCampaign fails (async failure)", async () => {
+    vi.mocked(api.getCampaign).mockRejectedValue(new Error("Network error"));
+    expect(() => renderCampaignDetail()).not.toThrow();
+    await waitFor(() => {
+      expect(screen.getByText(/network error|failed to load|campaign not found/i)).toBeInTheDocument();
+    });
+  });
+
+  it("integration: load campaign → show progress → contribute form visible when active", async () => {
+    const { useCampaign } = await import("../services/campaignContract");
+    vi.mocked(useCampaign).mockReturnValue({
+      goal: BigInt("10000000000000000000"),
+      deadline: BigInt(Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60),
+      totalContributed: 0n,
+      totalRaised: 0n,
+      closed: false,
+      fundsWithdrawn: false,
+      fundsReleased: false,
+      refundEnabled: false,
+      finalized: false,
+      creator: "0xcreator0000000000000000000000000000000001",
+      myContribution: 0n,
+      refetch: vi.fn(),
+    } as never);
+    renderCampaignDetail();
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: /test campaign/i })).toBeInTheDocument();
+    });
+    expect(screen.getByText(/goal:/i)).toBeInTheDocument();
+    expect(screen.getByText(/0% funded/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/amount \(eth\)/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /contribute/i })).toBeInTheDocument();
+  });
 });

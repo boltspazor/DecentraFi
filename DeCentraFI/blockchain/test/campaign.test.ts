@@ -239,4 +239,26 @@ describe("Campaign", function () {
     const releaseGas = await campaign.releaseFunds.estimateGas();
     expect(releaseGas).to.be.gt(0n);
   });
+
+  it("should revert claimRefund before deadline (refund not enabled until finalize)", async function () {
+    await campaign.connect(contributor1).contribute({ value: ethers.parseEther("1") });
+    await expect(campaign.connect(contributor1).claimRefund()).to.be.revertedWithCustomError(
+      campaign,
+      "RefundNotEnabled"
+    );
+  });
+
+  it("should leave contract balance zero after all contributors claim refund", async function () {
+    const a1 = ethers.parseEther("2");
+    const a2 = ethers.parseEther("3");
+    await campaign.connect(contributor1).contribute({ value: a1 });
+    await campaign.connect(contributor2).contribute({ value: a2 });
+    expect(await ethers.provider.getBalance(campaign.target)).to.equal(a1 + a2);
+    await advancePastDeadline();
+    await campaign.finalizeAfterDeadline();
+    await campaign.connect(contributor1).claimRefund();
+    expect(await ethers.provider.getBalance(campaign.target)).to.equal(a2);
+    await campaign.connect(contributor2).claimRefund();
+    expect(await ethers.provider.getBalance(campaign.target)).to.equal(0n);
+  });
 });

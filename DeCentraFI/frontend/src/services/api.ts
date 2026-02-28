@@ -1,5 +1,6 @@
 const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
 
+/** API contract: backend uses camelCase; goal/amountWei/totalRaised as wei strings; dates as ISO 8601. */
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -23,6 +24,11 @@ export interface CampaignMeta {
   totalRaised?: string;
   status?: string;
   createdAt: string;
+}
+
+/** GET /campaigns/:id response: campaign + optional contributors (same shape as GET /contributions/campaign/:id). */
+export interface GetCampaignResponse extends CampaignMeta {
+  contributors?: ContributionMeta[];
 }
 
 export async function createCampaign(data: {
@@ -69,7 +75,7 @@ export async function getCampaigns(): Promise<CampaignMeta[]> {
   return res.json();
 }
 
-export async function getCampaign(id: string): Promise<CampaignMeta> {
+export async function getCampaign(id: string): Promise<GetCampaignResponse> {
   const res = await fetch(`${API_BASE}/api/campaigns/${id}`);
   if (!res.ok) {
     const text = await res.text();
