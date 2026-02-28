@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import * as campaignService from "../services/campaignService.js";
+import * as contributionService from "../services/contributionService.js";
 import { validateCreateCampaignBody } from "../validation/campaignValidation.js";
 import { validatePatchStatusBody } from "../validation/contributionValidation.js";
 
@@ -53,7 +54,18 @@ export async function getCampaign(req: Request, res: Response) {
     if (!campaign) {
       return res.status(404).json({ error: "Campaign not found" });
     }
-    return res.json(formatCampaign(campaign));
+    const contributors = await contributionService.findByCampaignId(numId);
+    const payload = formatCampaign(campaign);
+    return res.json({
+      ...payload,
+      contributors: contributors.map((c) => ({
+        id: c.id,
+        contributorAddress: c.contributor_address,
+        amountWei: c.amount_wei,
+        txHash: c.tx_hash,
+        createdAt: c.created_at,
+      })),
+    });
   } catch (err) {
     return res.status(500).json({ error: "Internal server error" });
   }

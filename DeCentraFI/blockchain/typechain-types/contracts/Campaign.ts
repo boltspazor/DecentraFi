@@ -26,17 +26,23 @@ import type {
 export interface CampaignInterface extends Interface {
   getFunction(
     nameOrSignature:
+      | "claimRefund"
       | "closed"
       | "contribute"
       | "contributions"
       | "creator"
       | "deadline"
+      | "finalizeAfterDeadline"
+      | "finalized"
+      | "fundsReleased"
       | "fundsWithdrawn"
       | "goal"
       | "goalReached"
       | "refund"
+      | "refundEnabled"
+      | "releaseFunds"
       | "totalContributed"
-      | "withdraw"
+      | "totalRaised"
       | "withdrawFunds"
   ): FunctionFragment;
 
@@ -45,10 +51,16 @@ export interface CampaignInterface extends Interface {
       | "CampaignClosed"
       | "Contributed"
       | "ContributionReceived"
+      | "FundsReleased"
       | "Refund"
+      | "RefundClaimed"
       | "Withdrawal"
   ): EventFragment;
 
+  encodeFunctionData(
+    functionFragment: "claimRefund",
+    values?: undefined
+  ): string;
   encodeFunctionData(functionFragment: "closed", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "contribute",
@@ -61,6 +73,15 @@ export interface CampaignInterface extends Interface {
   encodeFunctionData(functionFragment: "creator", values?: undefined): string;
   encodeFunctionData(functionFragment: "deadline", values?: undefined): string;
   encodeFunctionData(
+    functionFragment: "finalizeAfterDeadline",
+    values?: undefined
+  ): string;
+  encodeFunctionData(functionFragment: "finalized", values?: undefined): string;
+  encodeFunctionData(
+    functionFragment: "fundsReleased",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
     functionFragment: "fundsWithdrawn",
     values?: undefined
   ): string;
@@ -71,15 +92,30 @@ export interface CampaignInterface extends Interface {
   ): string;
   encodeFunctionData(functionFragment: "refund", values?: undefined): string;
   encodeFunctionData(
+    functionFragment: "refundEnabled",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "releaseFunds",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
     functionFragment: "totalContributed",
     values?: undefined
   ): string;
-  encodeFunctionData(functionFragment: "withdraw", values?: undefined): string;
+  encodeFunctionData(
+    functionFragment: "totalRaised",
+    values?: undefined
+  ): string;
   encodeFunctionData(
     functionFragment: "withdrawFunds",
     values?: undefined
   ): string;
 
+  decodeFunctionResult(
+    functionFragment: "claimRefund",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "closed", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "contribute", data: BytesLike): Result;
   decodeFunctionResult(
@@ -88,6 +124,15 @@ export interface CampaignInterface extends Interface {
   ): Result;
   decodeFunctionResult(functionFragment: "creator", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "deadline", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "finalizeAfterDeadline",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(functionFragment: "finalized", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "fundsReleased",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(
     functionFragment: "fundsWithdrawn",
     data: BytesLike
@@ -99,10 +144,21 @@ export interface CampaignInterface extends Interface {
   ): Result;
   decodeFunctionResult(functionFragment: "refund", data: BytesLike): Result;
   decodeFunctionResult(
+    functionFragment: "refundEnabled",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "releaseFunds",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "totalContributed",
     data: BytesLike
   ): Result;
-  decodeFunctionResult(functionFragment: "withdraw", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "totalRaised",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(
     functionFragment: "withdrawFunds",
     data: BytesLike
@@ -147,7 +203,33 @@ export namespace ContributionReceivedEvent {
   export type LogDescription = TypedLogDescription<Event>;
 }
 
+export namespace FundsReleasedEvent {
+  export type InputTuple = [creator: AddressLike, amount: BigNumberish];
+  export type OutputTuple = [creator: string, amount: bigint];
+  export interface OutputObject {
+    creator: string;
+    amount: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
 export namespace RefundEvent {
+  export type InputTuple = [contributor: AddressLike, amount: BigNumberish];
+  export type OutputTuple = [contributor: string, amount: bigint];
+  export interface OutputObject {
+    contributor: string;
+    amount: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace RefundClaimedEvent {
   export type InputTuple = [contributor: AddressLike, amount: BigNumberish];
   export type OutputTuple = [contributor: string, amount: bigint];
   export interface OutputObject {
@@ -216,6 +298,8 @@ export interface Campaign extends BaseContract {
     event?: TCEvent
   ): Promise<this>;
 
+  claimRefund: TypedContractMethod<[], [void], "nonpayable">;
+
   closed: TypedContractMethod<[], [boolean], "view">;
 
   contribute: TypedContractMethod<[], [void], "payable">;
@@ -226,6 +310,12 @@ export interface Campaign extends BaseContract {
 
   deadline: TypedContractMethod<[], [bigint], "view">;
 
+  finalizeAfterDeadline: TypedContractMethod<[], [void], "nonpayable">;
+
+  finalized: TypedContractMethod<[], [boolean], "view">;
+
+  fundsReleased: TypedContractMethod<[], [boolean], "view">;
+
   fundsWithdrawn: TypedContractMethod<[], [boolean], "view">;
 
   goal: TypedContractMethod<[], [bigint], "view">;
@@ -234,9 +324,13 @@ export interface Campaign extends BaseContract {
 
   refund: TypedContractMethod<[], [void], "nonpayable">;
 
+  refundEnabled: TypedContractMethod<[], [boolean], "view">;
+
+  releaseFunds: TypedContractMethod<[], [void], "nonpayable">;
+
   totalContributed: TypedContractMethod<[], [bigint], "view">;
 
-  withdraw: TypedContractMethod<[], [void], "nonpayable">;
+  totalRaised: TypedContractMethod<[], [bigint], "view">;
 
   withdrawFunds: TypedContractMethod<[], [void], "nonpayable">;
 
@@ -244,6 +338,9 @@ export interface Campaign extends BaseContract {
     key: string | FunctionFragment
   ): T;
 
+  getFunction(
+    nameOrSignature: "claimRefund"
+  ): TypedContractMethod<[], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "closed"
   ): TypedContractMethod<[], [boolean], "view">;
@@ -260,6 +357,15 @@ export interface Campaign extends BaseContract {
     nameOrSignature: "deadline"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
+    nameOrSignature: "finalizeAfterDeadline"
+  ): TypedContractMethod<[], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "finalized"
+  ): TypedContractMethod<[], [boolean], "view">;
+  getFunction(
+    nameOrSignature: "fundsReleased"
+  ): TypedContractMethod<[], [boolean], "view">;
+  getFunction(
     nameOrSignature: "fundsWithdrawn"
   ): TypedContractMethod<[], [boolean], "view">;
   getFunction(
@@ -272,11 +378,17 @@ export interface Campaign extends BaseContract {
     nameOrSignature: "refund"
   ): TypedContractMethod<[], [void], "nonpayable">;
   getFunction(
+    nameOrSignature: "refundEnabled"
+  ): TypedContractMethod<[], [boolean], "view">;
+  getFunction(
+    nameOrSignature: "releaseFunds"
+  ): TypedContractMethod<[], [void], "nonpayable">;
+  getFunction(
     nameOrSignature: "totalContributed"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
-    nameOrSignature: "withdraw"
-  ): TypedContractMethod<[], [void], "nonpayable">;
+    nameOrSignature: "totalRaised"
+  ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
     nameOrSignature: "withdrawFunds"
   ): TypedContractMethod<[], [void], "nonpayable">;
@@ -303,11 +415,25 @@ export interface Campaign extends BaseContract {
     ContributionReceivedEvent.OutputObject
   >;
   getEvent(
+    key: "FundsReleased"
+  ): TypedContractEvent<
+    FundsReleasedEvent.InputTuple,
+    FundsReleasedEvent.OutputTuple,
+    FundsReleasedEvent.OutputObject
+  >;
+  getEvent(
     key: "Refund"
   ): TypedContractEvent<
     RefundEvent.InputTuple,
     RefundEvent.OutputTuple,
     RefundEvent.OutputObject
+  >;
+  getEvent(
+    key: "RefundClaimed"
+  ): TypedContractEvent<
+    RefundClaimedEvent.InputTuple,
+    RefundClaimedEvent.OutputTuple,
+    RefundClaimedEvent.OutputObject
   >;
   getEvent(
     key: "Withdrawal"
@@ -351,6 +477,17 @@ export interface Campaign extends BaseContract {
       ContributionReceivedEvent.OutputObject
     >;
 
+    "FundsReleased(address,uint256)": TypedContractEvent<
+      FundsReleasedEvent.InputTuple,
+      FundsReleasedEvent.OutputTuple,
+      FundsReleasedEvent.OutputObject
+    >;
+    FundsReleased: TypedContractEvent<
+      FundsReleasedEvent.InputTuple,
+      FundsReleasedEvent.OutputTuple,
+      FundsReleasedEvent.OutputObject
+    >;
+
     "Refund(address,uint256)": TypedContractEvent<
       RefundEvent.InputTuple,
       RefundEvent.OutputTuple,
@@ -360,6 +497,17 @@ export interface Campaign extends BaseContract {
       RefundEvent.InputTuple,
       RefundEvent.OutputTuple,
       RefundEvent.OutputObject
+    >;
+
+    "RefundClaimed(address,uint256)": TypedContractEvent<
+      RefundClaimedEvent.InputTuple,
+      RefundClaimedEvent.OutputTuple,
+      RefundClaimedEvent.OutputObject
+    >;
+    RefundClaimed: TypedContractEvent<
+      RefundClaimedEvent.InputTuple,
+      RefundClaimedEvent.OutputTuple,
+      RefundClaimedEvent.OutputObject
     >;
 
     "Withdrawal(address,uint256)": TypedContractEvent<

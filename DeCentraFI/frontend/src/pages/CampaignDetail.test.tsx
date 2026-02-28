@@ -39,9 +39,14 @@ vi.mock("../services/campaignContract", () => ({
     goal: BigInt("10000000000000000000"),
     deadline: BigInt(Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60),
     totalContributed: 0n,
+    totalRaised: 0n,
     closed: false,
     fundsWithdrawn: false,
+    fundsReleased: false,
+    refundEnabled: false,
+    finalized: false,
     creator: "0xcreator0000000000000000000000000000000001",
+    myContribution: 0n,
     refetch: vi.fn(),
   })),
   useContribute: vi.fn(() => ({
@@ -54,7 +59,21 @@ vi.mock("../services/campaignContract", () => ({
     contributorAddress: "0xuser0000000000000000000000000000000001",
   })),
   useWithdraw: vi.fn(() => ({
+    releaseFunds: vi.fn(),
     withdrawFunds: vi.fn(),
+    isPending: false,
+    isSuccess: false,
+    error: null,
+    reset: vi.fn(),
+  })),
+  useFinalize: vi.fn(() => ({
+    finalizeAfterDeadline: vi.fn(),
+    isPending: false,
+    isSuccess: false,
+    reset: vi.fn(),
+  })),
+  useRefund: vi.fn(() => ({
+    claimRefund: vi.fn(),
     isPending: false,
     isSuccess: false,
     error: null,
@@ -153,9 +172,14 @@ describe("CampaignDetail", () => {
       goal: BigInt("10000000000000000000"),
       deadline: BigInt(Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60),
       totalContributed: 0n,
+      totalRaised: 0n,
       closed: false,
       fundsWithdrawn: false,
+      fundsReleased: false,
+      refundEnabled: false,
+      finalized: false,
       creator: "0xanothercreator00000000000000000000000000",
+      myContribution: 0n,
       refetch: vi.fn(),
     } as never);
     renderCampaignDetail();
@@ -165,15 +189,21 @@ describe("CampaignDetail", () => {
     expect(screen.queryByRole("button", { name: /withdraw funds/i })).not.toBeInTheDocument();
   });
 
-  it("shows withdraw button only when creator and goal reached and not withdrawn", async () => {
+  it("shows withdraw button only when creator, goal reached, deadline passed, and not withdrawn", async () => {
     const { useCampaign } = await import("../services/campaignContract");
+    const pastDeadline = BigInt(Math.floor(Date.now() / 1000) - 60);
     vi.mocked(useCampaign).mockReturnValue({
       goal: BigInt("10000000000000000000"),
-      deadline: BigInt(Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60),
+      deadline: pastDeadline,
       totalContributed: BigInt("10000000000000000000"),
+      totalRaised: BigInt("10000000000000000000"),
       closed: true,
       fundsWithdrawn: false,
+      fundsReleased: false,
+      refundEnabled: false,
+      finalized: false,
       creator: "0xuser0000000000000000000000000000000001",
+      myContribution: 0n,
       refetch: vi.fn(),
     } as never);
     renderCampaignDetail();
@@ -188,9 +218,14 @@ describe("CampaignDetail", () => {
       goal: BigInt("10000000000000000000"),
       deadline: BigInt(Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60),
       totalContributed: BigInt("5000000000000000000"),
+      totalRaised: BigInt("5000000000000000000"),
       closed: false,
       fundsWithdrawn: false,
+      fundsReleased: false,
+      refundEnabled: false,
+      finalized: false,
       creator: "0xcreator0000000000000000000000000000000001",
+      myContribution: 0n,
       refetch: vi.fn(),
     } as never);
     renderCampaignDetail();

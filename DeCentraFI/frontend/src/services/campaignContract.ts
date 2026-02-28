@@ -27,6 +27,7 @@ function useCampaignContract(campaignAddress: `0x${string}` | null) {
 }
 
 export function useCampaign(campaignAddress: `0x${string}` | null) {
+  const { address } = useAccount();
   const { data: goal } = useReadContract({
     address: campaignAddress ?? undefined,
     abi: campaignAbi,
@@ -45,6 +46,12 @@ export function useCampaign(campaignAddress: `0x${string}` | null) {
     functionName: "totalContributed",
     chainId: sepolia.id,
   });
+  const { data: totalRaised } = useReadContract({
+    address: campaignAddress ?? undefined,
+    abi: campaignAbi,
+    functionName: "totalRaised",
+    chainId: sepolia.id,
+  });
   const { data: closed } = useReadContract({
     address: campaignAddress ?? undefined,
     abi: campaignAbi,
@@ -57,24 +64,55 @@ export function useCampaign(campaignAddress: `0x${string}` | null) {
     functionName: "fundsWithdrawn",
     chainId: sepolia.id,
   });
+  const { data: fundsReleased } = useReadContract({
+    address: campaignAddress ?? undefined,
+    abi: campaignAbi,
+    functionName: "fundsReleased",
+    chainId: sepolia.id,
+  });
+  const { data: refundEnabled } = useReadContract({
+    address: campaignAddress ?? undefined,
+    abi: campaignAbi,
+    functionName: "refundEnabled",
+    chainId: sepolia.id,
+  });
+  const { data: finalized } = useReadContract({
+    address: campaignAddress ?? undefined,
+    abi: campaignAbi,
+    functionName: "finalized",
+    chainId: sepolia.id,
+  });
   const { data: creator } = useReadContract({
     address: campaignAddress ?? undefined,
     abi: campaignAbi,
     functionName: "creator",
     chainId: sepolia.id,
   });
+  const { data: myContribution, refetch: refetchMyContribution } = useReadContract({
+    address: campaignAddress ?? undefined,
+    abi: campaignAbi,
+    functionName: "contributions",
+    args: address ? [address] : undefined,
+    chainId: sepolia.id,
+  });
 
   const refetch = () => {
     refetchTotal();
+    refetchMyContribution();
   };
 
   return {
     goal: goal ?? 0n,
     deadline: deadline ?? 0n,
     totalContributed: totalContributed ?? 0n,
+    totalRaised: totalRaised ?? totalContributed ?? 0n,
     closed: closed ?? false,
     fundsWithdrawn: fundsWithdrawn ?? false,
+    fundsReleased: fundsReleased ?? false,
+    refundEnabled: refundEnabled ?? false,
+    finalized: finalized ?? false,
     creator: creator ?? "0x0",
+    myContribution: myContribution ?? 0n,
     refetch,
     contract: useCampaignContract(campaignAddress),
   };
@@ -124,18 +162,67 @@ export function useWithdraw(campaignAddress: `0x${string}` | null) {
   } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
-  function withdrawFunds() {
+  function releaseFunds() {
     if (!campaignAddress) throw new Error("Campaign address required");
     writeContract({
       address: campaignAddress,
       abi: campaignAbi,
-      functionName: "withdrawFunds",
+      functionName: "releaseFunds",
       chainId: sepolia.id,
     });
   }
 
   return {
-    withdrawFunds,
+    releaseFunds,
+    withdrawFunds: releaseFunds,
+    hash,
+    isPending: isPending || isConfirming,
+    isSuccess,
+    error,
+    reset,
+  };
+}
+
+export function useFinalize(campaignAddress: `0x${string}` | null) {
+  const { writeContract, data: hash, isPending, error, reset } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+
+  function finalizeAfterDeadline() {
+    if (!campaignAddress) throw new Error("Campaign address required");
+    writeContract({
+      address: campaignAddress,
+      abi: campaignAbi,
+      functionName: "finalizeAfterDeadline",
+      chainId: sepolia.id,
+    });
+  }
+
+  return {
+    finalizeAfterDeadline,
+    hash,
+    isPending: isPending || isConfirming,
+    isSuccess,
+    error,
+    reset,
+  };
+}
+
+export function useRefund(campaignAddress: `0x${string}` | null) {
+  const { writeContract, data: hash, isPending, error, reset } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+
+  function claimRefund() {
+    if (!campaignAddress) throw new Error("Campaign address required");
+    writeContract({
+      address: campaignAddress,
+      abi: campaignAbi,
+      functionName: "claimRefund",
+      chainId: sepolia.id,
+    });
+  }
+
+  return {
+    claimRefund,
     hash,
     isPending: isPending || isConfirming,
     isSuccess,

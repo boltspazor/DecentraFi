@@ -11,6 +11,11 @@ describe("Campaign", function () {
   const goal = ethers.parseEther("10");
   const deadlineOffset = 60 * 60 * 24 * 7; // 7 days
 
+  async function advancePastDeadline() {
+    await ethers.provider.send("evm_increaseTime", [deadlineOffset + 1]);
+    await ethers.provider.send("evm_mine", []);
+  }
+
   beforeEach(async function () {
     [owner, contributor1, contributor2] = await ethers.getSigners();
     const CampaignFactory = await ethers.getContractFactory("CampaignFactory");
@@ -29,11 +34,29 @@ describe("Campaign", function () {
     expect(await campaign.deadline()).to.be.gt(0);
   });
 
-  // --- contribute() valid flow and state ---
-  it("should accept valid ETH and update totalContributed and contributions mapping", async function () {
+  // --- Escrow: contributions locked in contract ---
+  it("should lock contributions in contract until deadline", async function () {
+    const amount = ethers.parseEther("3");
+    await campaign.connect(contributor1).contribute({ value: amount });
+    expect(await ethers.provider.getBalance(campaign.target)).to.equal(amount);
+    expect(await campaign.totalRaised()).to.equal(amount);
+    expect(await campaign.totalContributed()).to.equal(amount);
+  });
+
+  it("should not allow early withdrawal before deadline even if goal reached", async function () {
+    await campaign.connect(contributor1).contribute({ value: ethers.parseEther("10") });
+    expect(await campaign.closed()).to.be.true;
+    await expect(campaign.withdrawFunds()).to.be.revertedWithCustomError(campaign, "DeadlineNotReached");
+    await expect(campaign.releaseFunds()).to.be.revertedWithCustomError(campaign, "DeadlineNotReached");
+    expect(await ethers.provider.getBalance(campaign.target)).to.equal(ethers.parseEther("10"));
+  });
+
+  // --- contribute() ---
+  it("should accept valid ETH and update totalContributed, totalRaised and contributions mapping", async function () {
     const amount = ethers.parseEther("1");
     await campaign.connect(contributor1).contribute({ value: amount });
     expect(await campaign.totalContributed()).to.equal(amount);
+    expect(await campaign.totalRaised()).to.equal(amount);
     expect(await campaign.contributions(contributor1.address)).to.equal(amount);
   });
 
@@ -51,8 +74,7 @@ describe("Campaign", function () {
   });
 
   it("should revert contribute after deadline", async function () {
-    await ethers.provider.send("evm_increaseTime", [deadlineOffset + 1]);
-    await ethers.provider.send("evm_mine", []);
+    await advancePastDeadline();
     await expect(
       campaign.connect(contributor1).contribute({ value: ethers.parseEther("1") })
     ).to.be.revertedWithCustomError(campaign, "CampaignEnded");
@@ -65,18 +87,6 @@ describe("Campaign", function () {
     expect(await campaign.totalContributed()).to.equal(ethers.parseEther("4"));
   });
 
-  it("should accept contributions and emit Contributed + ContributionReceived", async function () {
-    const amount = ethers.parseEther("1");
-    await expect(campaign.connect(contributor1).contribute({ value: amount }))
-      .to.emit(campaign, "Contributed")
-      .withArgs(contributor1.address, amount);
-    await expect(campaign.connect(contributor1).contribute({ value: amount }))
-      .to.emit(campaign, "ContributionReceived")
-      .withArgs(contributor1.address, amount);
-    expect(await campaign.contributions(contributor1.address)).to.equal(ethers.parseEther("2"));
-    expect(await campaign.totalContributed()).to.equal(ethers.parseEther("2"));
-  });
-
   it("should update state correctly after multiple contributors", async function () {
     await campaign.connect(contributor1).contribute({ value: ethers.parseEther("3") });
     await campaign.connect(contributor2).contribute({ value: ethers.parseEther("4") });
@@ -85,80 +95,148 @@ describe("Campaign", function () {
     expect(await campaign.contributions(contributor2.address)).to.equal(ethers.parseEther("4"));
   });
 
-  // --- withdrawFunds() ---
-  it("should allow only creator to call withdrawFunds", async function () {
-    await campaign.connect(contributor1).contribute({ value: ethers.parseEther("10") });
-    await expect(
-      campaign.connect(contributor1).withdrawFunds()
-    ).to.be.revertedWithCustomError(campaign, "NotCreator");
-  });
-
-  it("should revert withdraw when goal not reached", async function () {
-    await campaign.connect(contributor1).contribute({ value: ethers.parseEther("5") });
-    await expect(campaign.withdrawFunds()).to.be.revertedWithCustomError(campaign, "GoalNotReached");
-  });
-
-  it("should revert withdraw when deadline not passed and goal not reached", async function () {
-    await campaign.connect(contributor1).contribute({ value: ethers.parseEther("3") });
-    await expect(campaign.withdrawFunds()).to.be.revertedWithCustomError(campaign, "GoalNotReached");
-  });
-
-  it("should revert double withdrawal", async function () {
-    await campaign.connect(contributor1).contribute({ value: ethers.parseEther("10") });
-    await campaign.withdrawFunds();
-    await expect(campaign.withdrawFunds()).to.be.revertedWithCustomError(campaign, "AlreadyWithdrawn");
-  });
-
-  it("should transfer contract balance to creator and set fundsWithdrawn", async function () {
-    const amount = ethers.parseEther("10");
-    await campaign.connect(contributor1).contribute({ value: amount });
-    expect(await ethers.provider.getBalance(campaign.target)).to.equal(amount);
-
-    const balanceBefore = await ethers.provider.getBalance(owner.address);
-    const tx = await campaign.withdrawFunds();
-    const receipt = await tx.wait();
-    const gasUsed = receipt.gasUsed * receipt.gasPrice;
-    const balanceAfter = await ethers.provider.getBalance(owner.address);
-
-    expect(await ethers.provider.getBalance(campaign.target)).to.equal(0n);
-    expect(await campaign.fundsWithdrawn()).to.be.true;
-    expect(balanceAfter).to.equal(balanceBefore + amount - gasUsed);
-  });
-
-  it("should close and allow creator to withdraw when goal reached", async function () {
-    await campaign.connect(contributor1).contribute({ value: ethers.parseEther("10") });
-    expect(await campaign.closed()).to.be.true;
-    const balanceBefore = await ethers.provider.getBalance(owner.address);
-    const tx = await campaign.withdrawFunds();
-    const receipt = await tx.wait();
-    const gasUsed = receipt.gasUsed * receipt.gasPrice;
-    const balanceAfter = await ethers.provider.getBalance(owner.address);
-    expect(balanceAfter).to.equal(balanceBefore + ethers.parseEther("10") - gasUsed);
-    expect(await campaign.fundsWithdrawn()).to.be.true;
-  });
-
-  it("should estimate gas for contribute and withdrawFunds", async function () {
-    const amount = ethers.parseEther("1");
-    const contributeGas = await campaign.connect(contributor1).contribute.estimateGas({ value: amount });
-    expect(contributeGas).to.be.gt(0n);
-
-    await campaign.connect(contributor1).contribute({ value: ethers.parseEther("10") });
-    const withdrawGas = await campaign.withdrawFunds.estimateGas();
-    expect(withdrawGas).to.be.gt(0n);
-  });
-
-  it("should revert contribute when campaign has ended", async function () {
-    await ethers.provider.send("evm_increaseTime", [deadlineOffset + 1]);
-    await ethers.provider.send("evm_mine", []);
-    await expect(
-      campaign.connect(contributor1).contribute({ value: ethers.parseEther("1") })
-    ).to.be.revertedWithCustomError(campaign, "CampaignEnded");
-  });
-
   it("should revert contribute when goal already reached", async function () {
     await campaign.connect(contributor1).contribute({ value: ethers.parseEther("10") });
     await expect(
       campaign.connect(contributor2).contribute({ value: ethers.parseEther("1") })
     ).to.be.revertedWithCustomError(campaign, "GoalReached");
+  });
+
+  // --- releaseFunds() after deadline ---
+  it("should allow only creator to call releaseFunds", async function () {
+    await campaign.connect(contributor1).contribute({ value: ethers.parseEther("10") });
+    await advancePastDeadline();
+    await expect(
+      campaign.connect(contributor1).releaseFunds()
+    ).to.be.revertedWithCustomError(campaign, "NotCreator");
+  });
+
+  it("should revert releaseFunds when goal not reached", async function () {
+    await campaign.connect(contributor1).contribute({ value: ethers.parseEther("5") });
+    await advancePastDeadline();
+    await expect(campaign.releaseFunds()).to.be.revertedWithCustomError(campaign, "GoalNotReached");
+  });
+
+  it("should revert releaseFunds before deadline", async function () {
+    await campaign.connect(contributor1).contribute({ value: ethers.parseEther("10") });
+    await expect(campaign.releaseFunds()).to.be.revertedWithCustomError(campaign, "DeadlineNotReached");
+  });
+
+  it("should release funds to creator after deadline when goal met and emit FundsReleased", async function () {
+    const amount = ethers.parseEther("10");
+    await campaign.connect(contributor1).contribute({ value: amount });
+    await advancePastDeadline();
+    const balanceBefore = await ethers.provider.getBalance(owner.address);
+    const tx = await campaign.releaseFunds();
+    await expect(tx).to.emit(campaign, "FundsReleased").withArgs(owner.address, amount);
+    const receipt = await tx.wait();
+    const gasUsed = receipt.gasUsed * receipt.gasPrice;
+    const balanceAfter = await ethers.provider.getBalance(owner.address);
+    expect(await ethers.provider.getBalance(campaign.target)).to.equal(0n);
+    expect(await campaign.fundsReleased()).to.be.true;
+    expect(balanceAfter).to.equal(balanceBefore + amount - gasUsed);
+  });
+
+  it("should transfer contract balance to creator and set fundsReleased after deadline", async function () {
+    const amount = ethers.parseEther("10");
+    await campaign.connect(contributor1).contribute({ value: amount });
+    await advancePastDeadline();
+    const balanceBefore = await ethers.provider.getBalance(owner.address);
+    const tx = await campaign.releaseFunds();
+    const receipt = await tx.wait();
+    const gasUsed = receipt.gasUsed * receipt.gasPrice;
+    const balanceAfter = await ethers.provider.getBalance(owner.address);
+    expect(await ethers.provider.getBalance(campaign.target)).to.equal(0n);
+    expect(await campaign.fundsWithdrawn()).to.be.true;
+    expect(await campaign.fundsReleased()).to.be.true;
+    expect(balanceAfter).to.equal(balanceBefore + amount - gasUsed);
+  });
+
+  it("should revert double release", async function () {
+    await campaign.connect(contributor1).contribute({ value: ethers.parseEther("10") });
+    await advancePastDeadline();
+    await campaign.releaseFunds();
+    await expect(campaign.releaseFunds()).to.be.revertedWithCustomError(campaign, "AlreadyWithdrawn");
+  });
+
+  // --- finalizeAfterDeadline & claimRefund ---
+  it("should enable refunds after deadline when goal not met", async function () {
+    await campaign.connect(contributor1).contribute({ value: ethers.parseEther("3") });
+    await campaign.connect(contributor2).contribute({ value: ethers.parseEther("2") });
+    expect(await campaign.refundEnabled()).to.be.false;
+    await advancePastDeadline();
+    await campaign.finalizeAfterDeadline();
+    expect(await campaign.refundEnabled()).to.be.true;
+  });
+
+  it("should revert finalizeBeforeDeadline before deadline", async function () {
+    await expect(campaign.finalizeAfterDeadline()).to.be.revertedWithCustomError(campaign, "DeadlineNotReached");
+  });
+
+  it("should revert double finalize", async function () {
+    await campaign.connect(contributor1).contribute({ value: ethers.parseEther("2") });
+    await advancePastDeadline();
+    await campaign.finalizeAfterDeadline();
+    await expect(campaign.finalizeAfterDeadline()).to.be.revertedWithCustomError(campaign, "AlreadyFinalized");
+  });
+
+  it("should let contributor claimRefund and emit RefundClaimed when goal not met", async function () {
+    const amount = ethers.parseEther("2");
+    await campaign.connect(contributor1).contribute({ value: amount });
+    await advancePastDeadline();
+    await campaign.finalizeAfterDeadline();
+    const balanceBefore = await ethers.provider.getBalance(contributor1.address);
+    const tx = await campaign.connect(contributor1).claimRefund();
+    await expect(tx).to.emit(campaign, "RefundClaimed").withArgs(contributor1.address, amount);
+    const receipt = await tx.wait();
+    const gasUsed = receipt.gasUsed * receipt.gasPrice;
+    const balanceAfter = await ethers.provider.getBalance(contributor1.address);
+    expect(balanceAfter).to.equal(balanceBefore + amount - gasUsed);
+    expect(await campaign.contributions(contributor1.address)).to.equal(0n);
+  });
+
+  it("should refund correct amount and update balances", async function () {
+    const amount = ethers.parseEther("2");
+    await campaign.connect(contributor1).contribute({ value: amount });
+    await advancePastDeadline();
+    await campaign.finalizeAfterDeadline();
+    const balanceBefore = await ethers.provider.getBalance(contributor1.address);
+    const tx = await campaign.connect(contributor1).claimRefund();
+    const receipt = await tx.wait();
+    const gasUsed = receipt.gasUsed * receipt.gasPrice;
+    const balanceAfter = await ethers.provider.getBalance(contributor1.address);
+    expect(await campaign.contributions(contributor1.address)).to.equal(0n);
+    expect(balanceAfter).to.equal(balanceBefore + amount - gasUsed);
+  });
+
+  it("should revert claimRefund when refund not enabled", async function () {
+    await campaign.connect(contributor1).contribute({ value: ethers.parseEther("2") });
+    await expect(campaign.connect(contributor1).claimRefund()).to.be.revertedWithCustomError(campaign, "RefundNotEnabled");
+  });
+
+  it("should revert double claimRefund", async function () {
+    await campaign.connect(contributor1).contribute({ value: ethers.parseEther("2") });
+    await advancePastDeadline();
+    await campaign.finalizeAfterDeadline();
+    await campaign.connect(contributor1).claimRefund();
+    await expect(campaign.connect(contributor1).claimRefund()).to.be.revertedWithCustomError(campaign, "NoContribution");
+  });
+
+  it("should revert claimRefund for non-contributor", async function () {
+    await campaign.connect(contributor1).contribute({ value: ethers.parseEther("2") });
+    await advancePastDeadline();
+    await campaign.finalizeAfterDeadline();
+    await expect(campaign.connect(contributor2).claimRefund()).to.be.revertedWithCustomError(campaign, "NoContribution");
+  });
+
+  it("should estimate gas for contribute, releaseFunds, and claimRefund", async function () {
+    const amount = ethers.parseEther("1");
+    const contributeGas = await campaign.connect(contributor1).contribute.estimateGas({ value: amount });
+    expect(contributeGas).to.be.gt(0n);
+
+    await campaign.connect(contributor1).contribute({ value: ethers.parseEther("10") });
+    await advancePastDeadline();
+    const releaseGas = await campaign.releaseFunds.estimateGas();
+    expect(releaseGas).to.be.gt(0n);
   });
 });

@@ -2,11 +2,29 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useAccount, useSwitchChain } from "wagmi";
 import { sepolia } from "wagmi/chains";
-import { useCampaign, useContribute, useWithdraw } from "../services/campaignContract";
+import {
+  useCampaign,
+  useContribute,
+  useWithdraw,
+  useFinalize,
+  useRefund,
+} from "../services/campaignContract";
 import * as api from "../services/api";
 import { getTransactionErrorMessage } from "../utils/errorMessages";
 
 const SEPOLIA_ETHERSCAN_TX = "https://sepolia.etherscan.io/tx/";
+
+function formatCountdown(deadlineSeconds: number): string {
+  const now = Math.floor(Date.now() / 1000);
+  const remaining = Math.max(0, deadlineSeconds - now);
+  if (remaining <= 0) return "Ended";
+  const days = Math.floor(remaining / 86400);
+  const hours = Math.floor((remaining % 86400) / 3600);
+  const mins = Math.floor((remaining % 3600) / 60);
+  if (days > 0) return `${days}d ${hours}h remaining`;
+  if (hours > 0) return `${hours}h ${mins}m remaining`;
+  return `${mins}m remaining`;
+}
 
 export function CampaignDetail() {
   const { id } = useParams<{ id: string }>();
@@ -20,6 +38,7 @@ export function CampaignDetail() {
   const [contributeAmountEth, setContributeAmountEth] = useState("");
   const [contributeError, setContributeError] = useState<string | null>(null);
   const [contributeSuccessTx, setContributeSuccessTx] = useState<string | null>(null);
+  const [countdown, setCountdown] = useState("");
   const processedTxRef = useRef<string | null>(null);
 
   const campaignAddress = campaignMeta?.campaignAddress
@@ -30,9 +49,14 @@ export function CampaignDetail() {
     goal,
     deadline,
     totalContributed,
+    totalRaised,
     closed,
     fundsWithdrawn,
+    fundsReleased,
+    refundEnabled,
+    finalized,
     creator,
+    myContribution,
     refetch: refetchChain,
   } = useCampaign(campaignAddress);
 
@@ -47,19 +71,43 @@ export function CampaignDetail() {
   } = useContribute(campaignAddress);
 
   const {
-    withdrawFunds,
+    releaseFunds,
     isPending: isWithdrawPending,
     isSuccess: isWithdrawSuccess,
     error: withdrawError,
     reset: resetWithdraw,
   } = useWithdraw(campaignAddress);
 
+  const {
+    finalizeAfterDeadline,
+    isPending: isFinalizePending,
+    isSuccess: isFinalizeSuccess,
+    reset: resetFinalize,
+  } = useFinalize(campaignAddress);
+
+  const {
+    claimRefund,
+    isPending: isRefundPending,
+    isSuccess: isRefundSuccess,
+    error: refundError,
+    reset: resetRefund,
+  } = useRefund(campaignAddress);
+
   const isWrongNetwork = isConnected && chainId !== undefined && chainId !== sepolia.id;
   const isCreator = address && creator && address.toLowerCase() === creator.toLowerCase();
-  const canWithdraw = isCreator && closed && !fundsWithdrawn;
-  const isExpired = deadline > 0n && BigInt(Math.floor(Date.now() / 1000)) >= deadline;
-  const goalReached = goal > 0n && totalContributed >= goal;
-  const progressPercent = goal > 0n ? Number((totalContributed * 100n) / goal) : 0;
+  const deadlineNum = Number(deadline);
+  const isExpired = deadlineNum > 0 && Math.floor(Date.now() / 1000) >= deadlineNum;
+  const goalReached = goal > 0n && totalRaised >= goal;
+  const raisedForProgress = totalRaised > 0n ? totalRaised : totalContributed;
+  const progressPercent = goal > 0n ? Number((raisedForProgress * 100n) / goal) : 0;
+  const canReleaseFunds =
+    isCreator && closed && !fundsWithdrawn && !fundsReleased && isExpired;
+  const canClaimRefund =
+    isConnected &&
+    address &&
+    refundEnabled &&
+    myContribution > 0n;
+  const canFinalize = isExpired && !finalized && !closed && !refundEnabled;
 
   useEffect(() => {
     if (!id) return;
@@ -73,6 +121,14 @@ export function CampaignDetail() {
       .catch((e) => setErrorMeta(e instanceof Error ? e.message : "Failed to load campaign"))
       .finally(() => setLoadingMeta(false));
   }, [id]);
+
+  useEffect(() => {
+    if (deadlineNum <= 0) return;
+    const tick = () => setCountdown(formatCountdown(deadlineNum));
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [deadlineNum]);
 
   useEffect(() => {
     if (!isContributeSuccess || !contributeTxHash || !campaignMeta || !contributorAddress) return;
@@ -109,12 +165,25 @@ export function CampaignDetail() {
   useEffect(() => {
     if (isWithdrawSuccess) {
       refetchChain();
-      if (campaignMeta) {
-        api.getCampaign(String(campaignMeta.id)).then(setCampaignMeta);
-      }
+      if (campaignMeta) api.getCampaign(String(campaignMeta.id)).then(setCampaignMeta);
       resetWithdraw();
     }
   }, [isWithdrawSuccess, refetchChain, campaignMeta, resetWithdraw]);
+
+  useEffect(() => {
+    if (isFinalizeSuccess) {
+      refetchChain();
+      resetFinalize();
+    }
+  }, [isFinalizeSuccess, refetchChain, resetFinalize]);
+
+  useEffect(() => {
+    if (isRefundSuccess) {
+      refetchChain();
+      if (campaignMeta) api.getCampaign(String(campaignMeta.id)).then(setCampaignMeta);
+      resetRefund();
+    }
+  }, [isRefundSuccess, refetchChain, campaignMeta, resetRefund]);
 
   const handleContribute = (e: React.FormEvent) => {
     e.preventDefault();
@@ -148,11 +217,31 @@ export function CampaignDetail() {
     }
   };
 
-  const handleWithdraw = () => {
-    if (!canWithdraw) return;
+  const handleReleaseFunds = () => {
+    if (!canReleaseFunds) return;
     setContributeError(null);
     try {
-      withdrawFunds();
+      releaseFunds();
+    } catch (err) {
+      setContributeError(getTransactionErrorMessage(err));
+    }
+  };
+
+  const handleFinalize = () => {
+    if (!canFinalize) return;
+    setContributeError(null);
+    try {
+      finalizeAfterDeadline();
+    } catch (err) {
+      setContributeError(getTransactionErrorMessage(err));
+    }
+  };
+
+  const handleClaimRefund = () => {
+    if (!canClaimRefund) return;
+    setContributeError(null);
+    try {
+      claimRefund();
     } catch (err) {
       setContributeError(getTransactionErrorMessage(err));
     }
@@ -178,7 +267,7 @@ export function CampaignDetail() {
   }
 
   const goalEth = (Number(campaignMeta.goal) / 1e18).toFixed(4);
-  const raisedEth = (Number(totalContributed) / 1e18).toFixed(4);
+  const raisedEth = (Number(raisedForProgress) / 1e18).toFixed(4);
   const contributorCount = contributions.length;
 
   return (
@@ -203,8 +292,12 @@ export function CampaignDetail() {
         </div>
         <p className="text-xs text-gray-500 mt-1">{progressPercent}% funded</p>
         <p className="text-sm text-gray-600 mt-2">
-          Deadline: {new Date(Number(deadline) * 1000).toLocaleString()} • Contributors: {contributorCount}
+          Deadline: {new Date(deadlineNum * 1000).toLocaleString()}
+          {countdown && countdown !== "Ended" && (
+            <span className="ml-2 font-medium text-indigo-600">• {countdown}</span>
+          )}
         </p>
+        <p className="text-sm text-gray-600">Contributors: {contributorCount}</p>
         {campaignMeta.status && (
           <p className="text-sm font-medium mt-1">
             Status: <span className="text-indigo-600">{campaignMeta.status}</span>
@@ -225,18 +318,62 @@ export function CampaignDetail() {
         </div>
       )}
 
-      {canWithdraw && (
+      {isExpired && (
+        <div className="mb-4 p-3 rounded bg-gray-100 text-gray-800">
+          {goalReached ? (
+            <p className="font-medium">Goal Reached – Creator Can Withdraw</p>
+          ) : (
+            <p className="font-medium">Goal Not Met – Claim Refund Available</p>
+          )}
+        </div>
+      )}
+
+      {canReleaseFunds && (
         <div className="mb-6">
           <button
             type="button"
-            onClick={handleWithdraw}
+            onClick={handleReleaseFunds}
             disabled={isWithdrawPending}
             className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
           >
             {isWithdrawPending ? "Withdrawing…" : "Withdraw funds"}
           </button>
-          {withdrawError && (
-            <p className="mt-2 text-sm text-red-600">{getTransactionErrorMessage(withdrawError)}</p>
+          {(withdrawError || contributeError) && (
+            <p className="mt-2 text-sm text-red-600">
+              {getTransactionErrorMessage(withdrawError ?? contributeError)}
+            </p>
+          )}
+        </div>
+      )}
+
+      {canFinalize && isConnected && (
+        <div className="mb-6">
+          <button
+            type="button"
+            onClick={handleFinalize}
+            disabled={isFinalizePending}
+            className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 disabled:opacity-50"
+          >
+            {isFinalizePending ? "Finalizing…" : "Enable refunds (goal not met)"}
+          </button>
+        </div>
+      )}
+
+      {canClaimRefund && (
+        <div className="mb-6">
+          <button
+            type="button"
+            onClick={handleClaimRefund}
+            disabled={isRefundPending}
+            className="px-4 py-2 bg-amber-600 text-white rounded hover:bg-amber-700 disabled:opacity-50"
+          >
+            {isRefundPending ? "Claiming…" : "Claim refund"}
+          </button>
+          <p className="text-xs text-gray-600 mt-1">
+            Your contribution: {(Number(myContribution) / 1e18).toFixed(4)} ETH
+          </p>
+          {refundError && (
+            <p className="mt-2 text-sm text-red-600">{getTransactionErrorMessage(refundError)}</p>
           )}
         </div>
       )}
@@ -291,9 +428,11 @@ export function CampaignDetail() {
         </div>
       )}
 
-      {(closed || isExpired) && (
+      {(closed || isExpired) && !canReleaseFunds && !canClaimRefund && (
         <p className="text-gray-500 mb-6">
-          {goalReached ? "This campaign has reached its goal." : "This campaign has ended."}
+          {goalReached
+            ? "This campaign has reached its goal."
+            : "This campaign has ended."}
         </p>
       )}
 

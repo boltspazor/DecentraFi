@@ -25,8 +25,14 @@ export function getTransactionErrorMessage(error: unknown): string {
   if (msg.includes("AlreadyWithdrawn")) {
     return "Funds have already been withdrawn.";
   }
-  if (msg.includes("network") || msg.includes("chain")) {
-    return "Network error. Please switch to Sepolia and try again.";
+  if (msg.includes("RefundNotEnabled")) {
+    return "Refunds are not yet enabled for this campaign.";
+  }
+  if (msg.includes("DeadlineNotReached")) {
+    return "Funds cannot be released before the campaign deadline.";
+  }
+  if (msg.includes("AlreadyFinalized")) {
+    return "This campaign has already been finalized.";
   }
   if (msg.length > 200) {
     return "Transaction failed. Check your wallet and network.";

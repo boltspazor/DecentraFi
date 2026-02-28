@@ -12,6 +12,14 @@ describe("errorMessages", () => {
       expect(getTransactionErrorMessage({ message: "ZeroContribution()" })).toMatch(/greater than zero/i);
     });
 
+    it("returns message for refund not enabled", () => {
+      expect(getTransactionErrorMessage({ message: "RefundNotEnabled()" })).toMatch(/refunds are not yet enabled/i);
+    });
+
+    it("returns message for deadline not reached", () => {
+      expect(getTransactionErrorMessage({ message: "DeadlineNotReached()" })).toMatch(/before the campaign deadline/i);
+    });
+
     it("returns message for already withdrawn", () => {
       expect(getTransactionErrorMessage({ message: "AlreadyWithdrawn()" })).toMatch(/already been withdrawn/i);
     });

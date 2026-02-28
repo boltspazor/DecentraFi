@@ -15,6 +15,27 @@ export const campaignAbi = [
   },
   {
     type: "function",
+    name: "releaseFunds",
+    inputs: [],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "finalizeAfterDeadline",
+    inputs: [],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "claimRefund",
+    inputs: [],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
     name: "creator",
     inputs: [],
     outputs: [{ name: "", type: "address", internalType: "address" }],
@@ -43,6 +64,13 @@ export const campaignAbi = [
   },
   {
     type: "function",
+    name: "totalRaised",
+    inputs: [],
+    outputs: [{ name: "", type: "uint256", internalType: "uint256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
     name: "closed",
     inputs: [],
     outputs: [{ name: "", type: "bool", internalType: "bool" }],
@@ -57,6 +85,27 @@ export const campaignAbi = [
   },
   {
     type: "function",
+    name: "fundsReleased",
+    inputs: [],
+    outputs: [{ name: "", type: "bool", internalType: "bool" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "refundEnabled",
+    inputs: [],
+    outputs: [{ name: "", type: "bool", internalType: "bool" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "finalized",
+    inputs: [],
+    outputs: [{ name: "", type: "bool", internalType: "bool" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
     name: "contributions",
     inputs: [{ name: "", type: "address", internalType: "address" }],
     outputs: [{ name: "", type: "uint256", internalType: "uint256" }],
@@ -65,6 +114,30 @@ export const campaignAbi = [
   {
     type: "event",
     name: "Contributed",
+    inputs: [
+      { name: "contributor", type: "address", indexed: true, internalType: "address" },
+      { name: "amount", type: "uint256", indexed: false, internalType: "uint256" },
+    ],
+  },
+  {
+    type: "event",
+    name: "ContributionReceived",
+    inputs: [
+      { name: "contributor", type: "address", indexed: true, internalType: "address" },
+      { name: "amount", type: "uint256", indexed: false, internalType: "uint256" },
+    ],
+  },
+  {
+    type: "event",
+    name: "FundsReleased",
+    inputs: [
+      { name: "creator", type: "address", indexed: true, internalType: "address" },
+      { name: "amount", type: "uint256", indexed: false, internalType: "uint256" },
+    ],
+  },
+  {
+    type: "event",
+    name: "RefundClaimed",
     inputs: [
       { name: "contributor", type: "address", indexed: true, internalType: "address" },
       { name: "amount", type: "uint256", indexed: false, internalType: "uint256" },
