@@ -1,0 +1,78 @@
+import { useEffect } from "react";
+import { ethers } from "ethers";
+import { campaignAbi } from "../abis/campaign";
+
+type EventName = "ContributionReceived" | "FundsReleased" | "RefundClaimed";
+
+export interface CampaignEventHandlers {
+  onContributionReceived?: (payload: {
+    contributor: string;
+    amountWei: bigint;
+    txHash: string;
+  }) => void;
+  onFundsReleased?: (payload: { creator: string; amountWei: bigint; txHash: string }) => void;
+  onRefundClaimed?: (payload: {
+    contributor: string;
+    amountWei: bigint;
+    txHash: string;
+  }) => void;
+}
+
+function getWebSocketProvider() {
+  const url = import.meta.env.VITE_WS_RPC_URL as string | undefined;
+  if (!url) return null;
+  try {
+    return new ethers.WebSocketProvider(url);
+  } catch {
+    return null;
+  }
+}
+
+export function useCampaignEvents(
+  campaignAddress: `0x${string}` | null,
+  handlers: CampaignEventHandlers
+) {
+  useEffect(() => {
+    if (!campaignAddress) return;
+    const provider = getWebSocketProvider();
+    if (!provider) return;
+
+    const contract = new ethers.Contract(campaignAddress, campaignAbi as any, provider);
+
+    const contributionListener = (contributor: string, amount: bigint, event: ethers.Log) => {
+      handlers.onContributionReceived?.({
+        contributor,
+        amountWei: amount,
+        txHash: event.transactionHash,
+      });
+    };
+
+    const fundsReleasedListener = (creator: string, amount: bigint, event: ethers.Log) => {
+      handlers.onFundsReleased?.({
+        creator,
+        amountWei: amount,
+        txHash: event.transactionHash,
+      });
+    };
+
+    const refundClaimedListener = (contributor: string, amount: bigint, event: ethers.Log) => {
+      handlers.onRefundClaimed?.({
+        contributor,
+        amountWei: amount,
+        txHash: event.transactionHash,
+      });
+    };
+
+    contract.on("ContributionReceived" as EventName, contributionListener);
+    contract.on("FundsReleased" as EventName, fundsReleasedListener);
+    contract.on("RefundClaimed" as EventName, refundClaimedListener);
+
+    return () => {
+      contract.off("ContributionReceived" as EventName, contributionListener);
+      contract.off("FundsReleased" as EventName, fundsReleasedListener);
+      contract.off("RefundClaimed" as EventName, refundClaimedListener);
+      provider.destroy?.();
+    };
+  }, [campaignAddress, handlers.onContributionReceived, handlers.onFundsReleased, handlers.onRefundClaimed]);
+}
+

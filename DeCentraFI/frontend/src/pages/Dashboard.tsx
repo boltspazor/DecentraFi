@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { getUserContributions, type UserContributionSummary } from "../services/api";
 import { useCampaign } from "../services/campaignContract";
+import { useCampaignEvents } from "../services/campaignEvents";
 
 function formatEth(wei: string): string {
   const num = Number(wei);
@@ -18,7 +19,20 @@ function DashboardRow({ item }: { item: UserContributionSummary }) {
     totalContributed,
     refundEnabled,
     myContribution,
+    refetch,
   } = useCampaign(addr);
+
+  useCampaignEvents(addr, {
+    onContributionReceived: () => {
+      refetch();
+    },
+    onFundsReleased: () => {
+      refetch();
+    },
+    onRefundClaimed: () => {
+      refetch();
+    },
+  });
 
   const raisedForProgress = totalRaised > 0n ? totalRaised : totalContributed;
   const progressPercent = goal > 0n ? Number((raisedForProgress * 100n) / goal) : 0;
