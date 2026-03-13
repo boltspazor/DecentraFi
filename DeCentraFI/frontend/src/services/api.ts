@@ -204,3 +204,28 @@ export async function patchCampaignStatus(campaignId: number, status: string): P
   }
   return res.json();
 }
+
+export interface UserContributionSummary {
+  campaignId: number;
+  title: string;
+  status: string;
+  campaignAddress: string;
+  amountWei: string;
+  createdAt: string;
+}
+
+export async function getUserContributions(walletAddress: string): Promise<UserContributionSummary[]> {
+  const res = await fetch(`${API_BASE}/api/user/contributions/${walletAddress}`);
+  if (!res.ok) {
+    const text = await res.text();
+    let message = text;
+    try {
+      const json = JSON.parse(text) as { error?: string };
+      if (json.error) message = json.error;
+    } catch {
+      //
+    }
+    throw new ApiError(message, res.status);
+  }
+  return res.json();
+}
