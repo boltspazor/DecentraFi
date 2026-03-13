@@ -43,6 +43,67 @@ export async function getCampaigns(_req: Request, res: Response) {
   }
 }
 
+export async function searchCampaigns(req: Request, res: Response) {
+  try {
+    const {
+      q,
+      status,
+      goalMin,
+      goalMax,
+      deadline,
+      page = "1",
+      pageSize = "12",
+    } = req.query as Record<string, string | undefined>;
+
+    const parsedPage = Number.parseInt(page ?? "1", 10);
+    const parsedPageSize = Number.parseInt(pageSize ?? "12", 10);
+
+    let deadlineBefore: Date | undefined;
+    if (deadline) {
+      const d = new Date(deadline);
+      if (!Number.isNaN(d.getTime())) {
+        deadlineBefore = d;
+      }
+    }
+
+    const opts: campaignService.SearchCampaignsOptions = {
+      q: q?.trim() || undefined,
+      status: status?.trim()
+        ? status.trim().charAt(0).toUpperCase() + status.trim().slice(1).toLowerCase()
+        : undefined,
+      goalMinWei: goalMin && /^\d+$/.test(goalMin) ? goalMin : undefined,
+      goalMaxWei: goalMax && /^\d+$/.test(goalMax) ? goalMax : undefined,
+      deadlineBefore,
+      page: Number.isNaN(parsedPage) ? 1 : parsedPage,
+      pageSize: Number.isNaN(parsedPageSize) ? 12 : parsedPageSize,
+    };
+
+    const result = await campaignService.searchCampaigns(opts);
+    return res.json({
+      items: result.items.map(formatCampaign),
+      total: result.total,
+      page: result.page,
+      pageSize: result.pageSize,
+    });
+  } catch (err) {
+    return res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+export async function getActiveCampaigns(req: Request, res: Response) {
+  return searchCampaigns({
+    ...req,
+    query: { ...req.query, status: "active" },
+  } as Request, res);
+}
+
+export async function getSuccessfulCampaigns(req: Request, res: Response) {
+  return searchCampaigns({
+    ...req,
+    query: { ...req.query, status: "successful" },
+  } as Request, res);
+}
+
 export async function getCampaign(req: Request, res: Response) {
   try {
     const id = req.params.id;

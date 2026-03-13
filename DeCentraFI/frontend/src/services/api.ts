@@ -31,6 +31,23 @@ export interface GetCampaignResponse extends CampaignMeta {
   contributors?: ContributionMeta[];
 }
 
+export interface CampaignSearchParams {
+  q?: string;
+  status?: "Active" | "Successful" | "Failed";
+  goalMinWei?: string;
+  goalMaxWei?: string;
+  deadlineBefore?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface CampaignSearchResult {
+  items: CampaignMeta[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 export async function createCampaign(data: {
   title: string;
   description: string;
@@ -61,6 +78,33 @@ export async function createCampaign(data: {
 
 export async function getCampaigns(): Promise<CampaignMeta[]> {
   const res = await fetch(`${API_BASE}/api/campaigns`);
+  if (!res.ok) {
+    const text = await res.text();
+    let message = text;
+    try {
+      const json = JSON.parse(text) as { error?: string };
+      if (json.error) message = json.error;
+    } catch {
+      //
+    }
+    throw new ApiError(message, res.status);
+  }
+  return res.json();
+}
+
+export async function searchCampaigns(params: CampaignSearchParams): Promise<CampaignSearchResult> {
+  const searchParams = new URLSearchParams();
+  if (params.q) searchParams.set("q", params.q);
+  if (params.status) searchParams.set("status", params.status.toLowerCase());
+  if (params.goalMinWei) searchParams.set("goalMin", params.goalMinWei);
+  if (params.goalMaxWei) searchParams.set("goalMax", params.goalMaxWei);
+  if (params.deadlineBefore) searchParams.set("deadline", params.deadlineBefore);
+  if (params.page && params.page > 0) searchParams.set("page", String(params.page));
+  if (params.pageSize && params.pageSize > 0) searchParams.set("pageSize", String(params.pageSize));
+
+  const qs = searchParams.toString();
+  const url = `${API_BASE}/api/campaigns/search${qs ? `?${qs}` : ""}`;
+  const res = await fetch(url);
   if (!res.ok) {
     const text = await res.text();
     let message = text;

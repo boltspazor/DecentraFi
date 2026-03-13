@@ -5,6 +5,9 @@ const router = Router()
 
 router.post('/', campaignController.createCampaign)
 router.get('/', campaignController.getCampaigns)
+router.get('/search', campaignController.searchCampaigns)
+router.get('/active', campaignController.getActiveCampaigns)
+router.get('/successful', campaignController.getSuccessfulCampaigns)
 router.get('/:id', campaignController.getCampaign)
 router.patch('/:id/status', campaignController.patchCampaignStatus)
 

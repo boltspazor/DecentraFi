@@ -14,6 +14,9 @@ export function Navbar() {
         <Link to="/" className="text-gray-600 hover:text-gray-900">
           Home
         </Link>
+        <Link to="/explore" className="text-gray-600 hover:text-gray-900">
+          Explore
+        </Link>
         <Link to="/create" className="text-gray-600 hover:text-gray-900">
           Create Campaign
         </Link>

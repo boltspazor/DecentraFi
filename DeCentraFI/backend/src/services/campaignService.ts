@@ -82,3 +82,78 @@ export async function updateTotalRaisedAndStatus(
     [totalRaised, status, campaignId]
   );
 }
+
+export interface SearchCampaignsOptions {
+  q?: string;
+  status?: string;
+  goalMinWei?: string;
+  goalMaxWei?: string;
+  deadlineBefore?: Date;
+  page: number;
+  pageSize: number;
+}
+
+export interface SearchCampaignsResult {
+  items: CampaignRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export async function searchCampaigns(options: SearchCampaignsOptions): Promise<SearchCampaignsResult> {
+  const whereParts: string[] = [];
+  const values: unknown[] = [];
+
+  if (options.q && options.q.trim()) {
+    values.push(`%${options.q.trim()}%`);
+    const idx = values.length;
+    whereParts.push(`(title ILIKE $${idx} OR description ILIKE $${idx} OR creator ILIKE $${idx})`);
+  }
+
+  if (options.status && options.status.trim()) {
+    values.push(options.status.trim());
+    whereParts.push(`status = $${values.length}`);
+  }
+
+  if (options.goalMinWei) {
+    values.push(options.goalMinWei);
+    whereParts.push(`goal >= $${values.length}`);
+  }
+
+  if (options.goalMaxWei) {
+    values.push(options.goalMaxWei);
+    whereParts.push(`goal <= $${values.length}`);
+  }
+
+  if (options.deadlineBefore) {
+    values.push(options.deadlineBefore);
+    whereParts.push(`deadline <= $${values.length}`);
+  }
+
+  const whereSql = whereParts.length ? `WHERE ${whereParts.join(" AND ")}` : "";
+
+  const countSql = `SELECT COUNT(*)::int AS count FROM campaigns ${whereSql}`;
+  const countResult = await pool.query(countSql, values);
+  const total: number = countResult.rows[0]?.count ?? 0;
+
+  const page = Math.max(1, options.page);
+  const pageSize = Math.max(1, Math.min(options.pageSize, 50));
+  const offset = (page - 1) * pageSize;
+
+  const listSql = `
+    SELECT * FROM campaigns
+    ${whereSql}
+    ORDER BY created_at DESC
+    LIMIT $${values.length + 1}
+    OFFSET $${values.length + 2}
+  `;
+  const listValues = [...values, pageSize, offset];
+  const listResult = await pool.query(listSql, listValues);
+
+  return {
+    items: listResult.rows as CampaignRow[],
+    total,
+    page,
+    pageSize,
+  };
+}
