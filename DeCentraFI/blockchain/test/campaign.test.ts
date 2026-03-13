@@ -296,4 +296,75 @@ describe("Campaign", function () {
     expect(await campaign.totalMilestoneReleased()).to.equal(ethers.parseEther("5"));
     expect(await ethers.provider.getBalance(campaign.target)).to.equal(ethers.parseEther("5"));
   });
+
+  it("should revert milestone release if caller is not creator", async function () {
+    await campaign.setMilestones([100]);
+    await campaign.connect(contributor1).contribute({ value: ethers.parseEther("10") });
+    await advancePastDeadline();
+    await campaign.connect(contributor1).approveMilestone(0);
+
+    await expect(
+      campaign.connect(contributor1).releaseMilestoneFunds(0)
+    ).to.be.revertedWithCustomError(campaign, "NotCreator");
+  });
+
+  it("should revert milestone release if milestone already released", async function () {
+    await campaign.setMilestones([100]);
+    await campaign.connect(contributor1).contribute({ value: ethers.parseEther("10") });
+    await advancePastDeadline();
+    await campaign.connect(contributor1).approveMilestone(0);
+
+    await campaign.releaseMilestoneFunds(0);
+    await expect(campaign.releaseMilestoneFunds(0)).to.be.revertedWithCustomError(
+      campaign,
+      "MilestoneAlreadyReleased"
+    );
+  });
+
+  it("should revert approve and release for invalid milestone index", async function () {
+    // no milestones defined yet; index 0 is invalid
+    await expect(
+      campaign.connect(contributor1).approveMilestone(0)
+    ).to.be.revertedWithCustomError(campaign, "InvalidMilestoneId");
+
+    // creator calling release with invalid index
+    await expect(campaign.releaseMilestoneFunds(0)).to.be.revertedWithCustomError(
+      campaign,
+      "InvalidMilestoneId"
+    );
+  });
+
+  it("should revert release when approvals are insufficient", async function () {
+    // contributor1: 6 ETH, contributor2: 4 ETH
+    await campaign.setMilestones([100]);
+    const amount1 = ethers.parseEther("6");
+    const amount2 = ethers.parseEther("4");
+    await campaign.connect(contributor1).contribute({ value: amount1 });
+    await campaign.connect(contributor2).contribute({ value: amount2 });
+    await advancePastDeadline();
+
+    // Only contributor1 approves: 6 * 2 = 12, totalContributed = 10 -> passes threshold.
+    // So use only contributor2 (4 ETH) so 4 * 2 = 8 < 10.
+    const campaign2Goal = ethers.parseEther("10");
+    const CampaignFactory = await ethers.getContractFactory("CampaignFactory");
+    const factory2 = await CampaignFactory.deploy();
+    await factory2.waitForDeployment();
+    const deadline2 = (await ethers.provider.getBlock("latest")).timestamp + deadlineOffset;
+    await factory2.createCampaign(campaign2Goal, deadline2);
+    const addr2 = await factory2.campaigns(0);
+    const Campaign = await ethers.getContractFactory("Campaign");
+    const campaign2 = Campaign.attach(addr2);
+
+    await campaign2.setMilestones([100]);
+    await campaign2.connect(contributor1).contribute({ value: amount1 });
+    await campaign2.connect(contributor2).contribute({ value: amount2 });
+    await ethers.provider.send("evm_increaseTime", [deadlineOffset + 1]);
+    await ethers.provider.send("evm_mine", []);
+
+    await campaign2.connect(contributor2).approveMilestone(0);
+    await expect(campaign2.releaseMilestoneFunds(0)).to.be.revertedWithCustomError(
+      campaign2,
+      "MilestoneNotApproved"
+    );
+  });
 });
