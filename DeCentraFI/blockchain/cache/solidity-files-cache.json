@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "/Users/prabhjeet/Documents/Projects/DecentraFI_Minor_Project/decentrafi/blockchain/contracts/Campaign.sol": {
-      "lastModificationDate": 1772243418933,
-      "contentHash": "f4cd7ac66bb0d2a96c3d6d2945bad843",
+      "lastModificationDate": 1773389089424,
+      "contentHash": "803448e6dd474f3d1710f85a654f16ed",
       "sourceName": "contracts/Campaign.sol",
       "solcConfig": {
         "version": "0.8.20",

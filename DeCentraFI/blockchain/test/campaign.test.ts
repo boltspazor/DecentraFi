@@ -261,4 +261,39 @@ describe("Campaign", function () {
     await campaign.connect(contributor2).claimRefund();
     expect(await ethers.provider.getBalance(campaign.target)).to.equal(0n);
   });
+
+  // --- Milestone-based fund releases ---
+  it("allows creator to define milestones that sum to 100%", async function () {
+    await campaign.setMilestones([25, 25, 25, 25]);
+    const m0 = await campaign.milestones(0);
+    expect(m0.percentage).to.equal(25);
+    expect(m0.released).to.equal(false);
+  });
+
+  it("allows contributors to approve a milestone and creator to release proportional funds", async function () {
+    // Define 2 milestones: 50% and 50%
+    await campaign.setMilestones([50, 50]);
+
+    const amount1 = ethers.parseEther("6");
+    const amount2 = ethers.parseEther("4");
+    await campaign.connect(contributor1).contribute({ value: amount1 });
+    await campaign.connect(contributor2).contribute({ value: amount2 });
+    expect(await campaign.totalContributed()).to.equal(ethers.parseEther("10"));
+    await advancePastDeadline();
+
+    // Both contributors approve milestone 0
+    await campaign.connect(contributor1).approveMilestone(0);
+    await campaign.connect(contributor2).approveMilestone(0);
+
+    const balanceBefore = await ethers.provider.getBalance(owner.address);
+    const tx = await campaign.releaseMilestoneFunds(0);
+    const receipt = await tx.wait();
+    const gasUsed = receipt.gasUsed * receipt.gasPrice;
+    const balanceAfter = await ethers.provider.getBalance(owner.address);
+
+    // 50% of totalRaised (10 ETH) = 5 ETH
+    expect(balanceAfter).to.equal(balanceBefore + ethers.parseEther("5") - gasUsed);
+    expect(await campaign.totalMilestoneReleased()).to.equal(ethers.parseEther("5"));
+    expect(await ethers.provider.getBalance(campaign.target)).to.equal(ethers.parseEther("5"));
+  });
 });
