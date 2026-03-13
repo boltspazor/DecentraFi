@@ -117,9 +117,11 @@ export async function getCampaign(req: Request, res: Response) {
     }
     const contributors = await contributionService.findByCampaignId(numId);
     const payload = formatCampaign(campaign);
-    /** Response shape: campaign (camelCase, dates ISO) + contributors[] (camelCase) for frontend alignment. */
+    const { trustScore: creatorTrustScore } = await campaignService.getCreatorTrustScore(campaign.creator);
+    /** Response shape: campaign (camelCase, dates ISO) + contributors[] (camelCase) + creatorTrustScore for frontend. */
     return res.json({
       ...payload,
+      creatorTrustScore,
       contributors: contributors.map((c) => ({
         id: c.id,
         contributorAddress: c.contributor_address,

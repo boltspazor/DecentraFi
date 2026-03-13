@@ -100,6 +100,29 @@ export interface SearchCampaignsResult {
   pageSize: number;
 }
 
+/** Trust score: (successfulCampaigns * 2) - failedCampaigns, clamped to 0–10 for display. */
+export async function getCreatorTrustScore(creatorAddress: string): Promise<{
+  trustScore: number;
+  successfulCampaigns: number;
+  failedCampaigns: number;
+}> {
+  const creator = creatorAddress.toLowerCase();
+  const countResult = await pool.query(
+    `SELECT
+       COUNT(*) FILTER (WHERE LOWER(TRIM(status)) = 'successful')::int AS successful,
+       COUNT(*) FILTER (WHERE LOWER(TRIM(status)) = 'failed')::int AS failed
+     FROM campaigns
+     WHERE LOWER(creator) = $1`,
+    [creator]
+  );
+  const row = countResult.rows[0] as { successful: number; failed: number };
+  const successful = row?.successful ?? 0;
+  const failed = row?.failed ?? 0;
+  const rawScore = successful * 2 - failed;
+  const trustScore = Math.max(0, Math.min(10, rawScore));
+  return { trustScore, successfulCampaigns: successful, failedCampaigns: failed };
+}
+
 export async function searchCampaigns(options: SearchCampaignsOptions): Promise<SearchCampaignsResult> {
   const whereParts: string[] = [];
   const values: unknown[] = [];

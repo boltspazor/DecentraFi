@@ -15,6 +15,7 @@ const mockCampaignMeta = {
   totalRaised: "0",
   status: "Active",
   createdAt: new Date().toISOString(),
+  creatorTrustScore: 8,
 };
 
 const mockContributions: { id: number; campaignId: number; contributorAddress: string; amountWei: string; txHash: string; createdAt: string }[] = [];
@@ -125,6 +126,15 @@ describe("CampaignDetail", () => {
       expect(screen.getByText(/goal:/i)).toBeInTheDocument();
     });
     expect(screen.getByText(/0% funded/)).toBeInTheDocument();
+  });
+
+  it("displays creator trust score when present", async () => {
+    renderCampaignDetail();
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: /test campaign/i })).toBeInTheDocument();
+    });
+    expect(screen.getByText(/Trust Score:/)).toBeInTheDocument();
+    expect(screen.getByText(/8\/10/)).toBeInTheDocument();
   });
 
   it("rejects zero amount and shows error", async () => {

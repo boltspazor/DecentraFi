@@ -88,7 +88,7 @@ describe("Contributions & campaign detail (integration)", () => {
     expect(res.body.error).toMatch(/transaction hash|already/i);
   });
 
-  it("should return campaign detail from GET /api/campaigns/:id", async () => {
+  it("should return campaign detail from GET /api/campaigns/:id including creatorTrustScore", async () => {
     if (!campaignId) return;
     const res = await request(app).get(`/api/campaigns/${campaignId}`);
     expect(res.status).toBe(200);
@@ -96,6 +96,10 @@ describe("Contributions & campaign detail (integration)", () => {
     expect(res.body).toHaveProperty("title");
     expect(res.body).toHaveProperty("totalRaised");
     expect(res.body).toHaveProperty("status");
+    expect(res.body).toHaveProperty("creatorTrustScore");
+    expect(typeof res.body.creatorTrustScore).toBe("number");
+    expect(res.body.creatorTrustScore).toBeGreaterThanOrEqual(0);
+    expect(res.body.creatorTrustScore).toBeLessThanOrEqual(10);
   });
 
   it("should return contributions list from GET /api/contributions/campaign/:id", async () => {

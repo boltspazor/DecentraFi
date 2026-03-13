@@ -31,7 +31,7 @@ export function CampaignDetail() {
   const { address, isConnected, chainId } = useAccount();
   const { switchChain } = useSwitchChain();
 
-  const [campaignMeta, setCampaignMeta] = useState<api.CampaignMeta | null>(null);
+  const [campaignMeta, setCampaignMeta] = useState<api.GetCampaignResponse | null>(null);
   const [contributions, setContributions] = useState<api.ContributionMeta[]>([]);
   const [loadingMeta, setLoadingMeta] = useState(true);
   const [errorMeta, setErrorMeta] = useState<string | null>(null);
@@ -307,6 +307,12 @@ export function CampaignDetail() {
         {campaignMeta.status && (
           <p className="text-sm font-medium mt-1">
             Status: <span className="text-indigo-600">{campaignMeta.status}</span>
+          </p>
+        )}
+        {typeof campaignMeta.creatorTrustScore === "number" && (
+          <p className="text-sm text-gray-700 mt-2">
+            <span className="text-amber-500">⭐</span> Trust Score:{" "}
+            <span className="font-semibold">{campaignMeta.creatorTrustScore}/10</span>
           </p>
         )}
       </div>

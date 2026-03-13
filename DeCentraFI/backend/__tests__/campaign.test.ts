@@ -13,12 +13,14 @@ function futureDeadline() {
 const mockCreate = jest.fn();
 const mockFindById = jest.fn();
 
+const mockGetCreatorTrustScore = jest.fn(() => Promise.resolve({ trustScore: 5 }));
 jest.unstable_mockModule("../src/services/campaignService.js", () => ({
   create: (...args: unknown[]) => mockCreate(...args),
   findById: (...args: unknown[]) => mockFindById(...args),
   findAll: jest.fn(() => Promise.resolve([])),
   findByCampaignAddress: jest.fn(() => Promise.resolve(null)),
   updateTotalRaisedAndStatus: jest.fn(() => Promise.resolve()),
+  getCreatorTrustScore: (...args: unknown[]) => mockGetCreatorTrustScore(...args),
 }));
 jest.unstable_mockModule("../src/services/contributionService.js", () => ({
   findByCampaignId: jest.fn(() => Promise.resolve([])),

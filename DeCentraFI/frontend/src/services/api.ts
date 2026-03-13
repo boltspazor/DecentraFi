@@ -26,9 +26,11 @@ export interface CampaignMeta {
   createdAt: string;
 }
 
-/** GET /campaigns/:id response: campaign + optional contributors (same shape as GET /contributions/campaign/:id). */
+/** GET /campaigns/:id response: campaign + optional contributors + creator trust score. */
 export interface GetCampaignResponse extends CampaignMeta {
   contributors?: ContributionMeta[];
+  /** Creator trust score 0–10 from successful/failed campaign history. */
+  creatorTrustScore?: number;
 }
 
 export interface CampaignSearchParams {
