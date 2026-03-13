@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { ethers } from "ethers";
 import { campaignAbi } from "../abis/campaign";
 
@@ -32,6 +32,15 @@ export function useCampaignEvents(
   campaignAddress: `0x${string}` | null,
   handlers: CampaignEventHandlers
 ) {
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
   useEffect(() => {
     if (!campaignAddress) return;
     const provider = getWebSocketProvider();
@@ -40,6 +49,7 @@ export function useCampaignEvents(
     const contract = new ethers.Contract(campaignAddress, campaignAbi as any, provider);
 
     const contributionListener = (contributor: string, amount: bigint, event: ethers.Log) => {
+      if (!mountedRef.current) return;
       handlers.onContributionReceived?.({
         contributor,
         amountWei: amount,
@@ -48,6 +58,7 @@ export function useCampaignEvents(
     };
 
     const fundsReleasedListener = (creator: string, amount: bigint, event: ethers.Log) => {
+      if (!mountedRef.current) return;
       handlers.onFundsReleased?.({
         creator,
         amountWei: amount,
@@ -56,6 +67,7 @@ export function useCampaignEvents(
     };
 
     const refundClaimedListener = (contributor: string, amount: bigint, event: ethers.Log) => {
+      if (!mountedRef.current) return;
       handlers.onRefundClaimed?.({
         contributor,
         amountWei: amount,

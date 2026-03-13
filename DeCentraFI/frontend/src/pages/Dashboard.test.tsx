@@ -3,6 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Dashboard } from "./Dashboard";
+import type { CampaignEventHandlers } from "../services/campaignEvents";
 
 vi.mock("wagmi", () => ({
   useAccount: vi.fn(() => ({
@@ -15,6 +16,7 @@ vi.mock("../services/api", () => ({
   getUserContributions: vi.fn(),
 }));
 
+const refetchCampaignMock = vi.fn();
 vi.mock("../services/campaignContract", () => ({
   useCampaign: vi.fn(() => ({
     goal: 10000000000000000000n,
@@ -22,11 +24,20 @@ vi.mock("../services/campaignContract", () => ({
     totalContributed: 3000000000000000000n,
     refundEnabled: false,
     myContribution: 1000000000000000000n,
+    refetch: refetchCampaignMock,
   })),
+}));
+
+let capturedEventHandlers: CampaignEventHandlers = {};
+vi.mock("../services/campaignEvents", () => ({
+  useCampaignEvents: vi.fn((_addr: string, handlers: CampaignEventHandlers) => {
+    capturedEventHandlers = handlers;
+  }),
 }));
 
 import { useAccount } from "wagmi";
 import { getUserContributions } from "../services/api";
+import { useCampaign } from "../services/campaignContract";
 
 function renderDashboard(initialEntries: string[] = ["/dashboard"]) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -48,6 +59,8 @@ describe("Dashboard", () => {
       isConnected: true,
     } as never);
     vi.mocked(getUserContributions).mockResolvedValue([]);
+    refetchCampaignMock.mockClear();
+    capturedEventHandlers = {};
   });
 
   it("renders dashboard correctly when connected", async () => {
@@ -96,5 +109,102 @@ describe("Dashboard", () => {
     expect(screen.getByRole("heading", { name: /your dashboard/i })).toBeInTheDocument();
     expect(screen.getByText(/connect your wallet to view campaigns you have funded/i)).toBeInTheDocument();
     expect(getUserContributions).not.toHaveBeenCalled();
+  });
+
+  describe("event-driven updates", () => {
+    const oneContribution = [
+      {
+        campaignId: 1,
+        title: "Event Test Campaign",
+        status: "Active",
+        campaignAddress: "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        amountWei: "1000000000000000000",
+        createdAt: new Date().toISOString(),
+      },
+    ];
+
+    it("progress bar shows percentage from contract state", async () => {
+      vi.mocked(useCampaign).mockReturnValue({
+        goal: 10000000000000000000n,
+        totalRaised: 3000000000000000000n,
+        totalContributed: 3000000000000000000n,
+        refundEnabled: false,
+        myContribution: 1000000000000000000n,
+        refetch: refetchCampaignMock,
+      } as never);
+      vi.mocked(getUserContributions).mockResolvedValue(oneContribution);
+      renderDashboard();
+      await waitFor(() => {
+        expect(screen.getByText(/event test campaign/i)).toBeInTheDocument();
+      });
+      expect(screen.getByText(/Progress: 30%/)).toBeInTheDocument();
+    });
+
+    it("ContributionReceived event triggers refetch so contribution list can update", async () => {
+      vi.mocked(getUserContributions).mockResolvedValue(oneContribution);
+      renderDashboard();
+      await waitFor(() => {
+        expect(screen.getByText(/event test campaign/i)).toBeInTheDocument();
+      });
+      expect(refetchCampaignMock).not.toHaveBeenCalled();
+      capturedEventHandlers.onContributionReceived?.({ contributor: "0xa", amountWei: 1000n, txHash: "0x1" });
+      expect(refetchCampaignMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("shows Refund eligible when refundEnabled and myContribution > 0", async () => {
+      vi.mocked(useCampaign).mockReturnValue({
+        goal: 10000000000000000000n,
+        totalRaised: 5000000000000000000n,
+        totalContributed: 5000000000000000000n,
+        refundEnabled: true,
+        myContribution: 1000000000000000000n,
+        refetch: refetchCampaignMock,
+      } as never);
+      vi.mocked(getUserContributions).mockResolvedValue(oneContribution);
+      renderDashboard();
+      await waitFor(() => {
+        expect(screen.getByText(/refund eligible/i)).toBeInTheDocument();
+      });
+    });
+
+    it("shows Refund not available when refund not enabled", async () => {
+      vi.mocked(useCampaign).mockReturnValue({
+        goal: 10000000000000000000n,
+        totalRaised: 3000000000000000000n,
+        totalContributed: 3000000000000000000n,
+        refundEnabled: false,
+        myContribution: 1000000000000000000n,
+        refetch: refetchCampaignMock,
+      } as never);
+      vi.mocked(getUserContributions).mockResolvedValue(oneContribution);
+      renderDashboard();
+      await waitFor(() => {
+        expect(screen.getByText(/refund not available/i)).toBeInTheDocument();
+      });
+    });
+
+    it("FundsReleased and RefundClaimed events trigger refetch for withdraw/refund UI", async () => {
+      vi.mocked(getUserContributions).mockResolvedValue(oneContribution);
+      renderDashboard();
+      await waitFor(() => {
+        expect(screen.getByText(/event test campaign/i)).toBeInTheDocument();
+      });
+      refetchCampaignMock.mockClear();
+      capturedEventHandlers.onFundsReleased?.({ creator: "0xc", amountWei: 5000n, txHash: "0x2" });
+      capturedEventHandlers.onRefundClaimed?.({ contributor: "0xd", amountWei: 1000n, txHash: "0x3" });
+      expect(refetchCampaignMock).toHaveBeenCalledTimes(2);
+    });
+
+    it("duplicate events call refetch each time", async () => {
+      vi.mocked(getUserContributions).mockResolvedValue(oneContribution);
+      renderDashboard();
+      await waitFor(() => {
+        expect(screen.getByText(/event test campaign/i)).toBeInTheDocument();
+      });
+      refetchCampaignMock.mockClear();
+      capturedEventHandlers.onContributionReceived?.({ contributor: "0xa", amountWei: 100n, txHash: "0x1" });
+      capturedEventHandlers.onContributionReceived?.({ contributor: "0xa", amountWei: 100n, txHash: "0x1" });
+      expect(refetchCampaignMock).toHaveBeenCalledTimes(2);
+    });
   });
 });
