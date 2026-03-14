@@ -39,6 +39,9 @@ export async function postReport(req: Request, res: Response) {
     if (e.code === "INVALID_WALLET") {
       return res.status(400).json({ error: e.message });
     }
+    if (e.code === "DUPLICATE_REPORT") {
+      return res.status(409).json({ error: e.message });
+    }
     return res.status(500).json({ error: "Internal server error" });
   }
 }

@@ -24,6 +24,7 @@ vi.mock("../services/api", () => ({
   getCampaign: vi.fn(),
   getContributionsByCampaign: vi.fn(),
   postContribution: vi.fn(),
+  reportCampaign: vi.fn(),
 }));
 
 vi.mock("wagmi", () => ({
@@ -103,6 +104,7 @@ describe("CampaignDetail", () => {
   beforeEach(() => {
     vi.mocked(api.getCampaign).mockResolvedValue(mockCampaignMeta as never);
     vi.mocked(api.getContributionsByCampaign).mockResolvedValue(mockContributions as never);
+    vi.mocked(api.reportCampaign).mockResolvedValue(undefined as never);
     vi.clearAllMocks();
   });
 
@@ -401,5 +403,64 @@ describe("CampaignDetail", () => {
     expect(screen.getByText(/0% funded/)).toBeInTheDocument();
     expect(screen.getByLabelText(/amount \(eth\)/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /contribute/i })).toBeInTheDocument();
+  });
+
+  describe("Fraud detection UI", () => {
+    it("shows verification badge when campaign is verified", async () => {
+      vi.mocked(api.getCampaign).mockResolvedValue({
+        ...mockCampaignMeta,
+        isVerified: true,
+      } as never);
+      renderCampaignDetail();
+      await waitFor(() => {
+        expect(screen.getByRole("heading", { name: /test campaign/i })).toBeInTheDocument();
+      });
+      expect(screen.getByText(/Verified Campaign/i)).toBeInTheDocument();
+    });
+
+    it("shows reported warning when campaign has reports and is not verified", async () => {
+      vi.mocked(api.getCampaign).mockResolvedValue({
+        ...mockCampaignMeta,
+        isVerified: false,
+        reportCount: 1,
+      } as never);
+      renderCampaignDetail();
+      await waitFor(() => {
+        expect(screen.getByRole("heading", { name: /test campaign/i })).toBeInTheDocument();
+      });
+      expect(screen.getByText(/Reported Campaign/i)).toBeInTheDocument();
+    });
+
+    it("report button submits and shows success", async () => {
+      vi.mocked(api.reportCampaign).mockResolvedValue(undefined as never);
+      renderCampaignDetail();
+      await waitFor(() => {
+        expect(screen.getByRole("heading", { name: /test campaign/i })).toBeInTheDocument();
+      });
+      const reportButton = screen.getByRole("button", { name: /Report Campaign/i });
+      expect(reportButton).toBeInTheDocument();
+      fireEvent.click(reportButton);
+      await waitFor(() => {
+        expect(screen.getByText(/Report submitted\. Thank you\./i)).toBeInTheDocument();
+      });
+      expect(api.reportCampaign).toHaveBeenCalledWith(
+        expect.objectContaining({
+          campaignId: 1,
+          reporterWallet: "0xuser0000000000000000000000000000000001",
+        })
+      );
+    });
+
+    it("does not show report section when campaign is verified", async () => {
+      vi.mocked(api.getCampaign).mockResolvedValue({
+        ...mockCampaignMeta,
+        isVerified: true,
+      } as never);
+      renderCampaignDetail();
+      await waitFor(() => {
+        expect(screen.getByRole("heading", { name: /test campaign/i })).toBeInTheDocument();
+      });
+      expect(screen.queryByRole("button", { name: /Report Campaign/i })).not.toBeInTheDocument();
+    });
   });
 });

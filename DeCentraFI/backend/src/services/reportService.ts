@@ -21,14 +21,24 @@ export async function create(data: {
     (err as NodeJS.ErrnoException).code = "INVALID_WALLET";
     throw err;
   }
-  const result = await pool.query(
-    `INSERT INTO campaign_reports (campaign_id, reporter_wallet, reason)
-     VALUES ($1, $2, $3)
-     RETURNING *`,
-    [data.campaignId, wallet.toLowerCase(), data.reason ?? null]
-  );
-  if (!result.rows[0]) throw new Error("Insert failed");
-  return result.rows[0] as ReportRow;
+  try {
+    const result = await pool.query(
+      `INSERT INTO campaign_reports (campaign_id, reporter_wallet, reason)
+       VALUES ($1, $2, $3)
+       RETURNING *`,
+      [data.campaignId, wallet.toLowerCase(), data.reason ?? null]
+    );
+    if (!result.rows[0]) throw new Error("Insert failed");
+    return result.rows[0] as ReportRow;
+  } catch (e: unknown) {
+    const err = e as { code?: string };
+    if (err.code === "23505") {
+      const dup = new Error("This wallet has already reported this campaign");
+      (dup as NodeJS.ErrnoException).code = "DUPLICATE_REPORT";
+      throw dup;
+    }
+    throw e;
+  }
 }
 
 export async function findByCampaignId(campaignId: number): Promise<ReportRow[]> {

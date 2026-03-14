@@ -367,4 +367,56 @@ describe("Campaign", function () {
       "MilestoneNotApproved"
     );
   });
+
+  describe("Fraud detection: report and verify", function () {
+    it("should allow users to report campaign", async function () {
+      await campaign.connect(contributor1).reportCampaign();
+      expect(await campaign.reporters(contributor1.address)).to.be.true;
+      expect(await campaign.reportCount()).to.equal(1);
+    });
+
+    it("should prevent duplicate report by same user", async function () {
+      await campaign.connect(contributor1).reportCampaign();
+      await expect(
+        campaign.connect(contributor1).reportCampaign()
+      ).to.be.revertedWithCustomError(campaign, "AlreadyReported");
+    });
+
+    it("should increment report count for each unique reporter", async function () {
+      await campaign.connect(contributor1).reportCampaign();
+      expect(await campaign.reportCount()).to.equal(1);
+      await campaign.connect(contributor2).reportCampaign();
+      expect(await campaign.reportCount()).to.equal(2);
+    });
+
+    it("should allow only admin to verify campaign", async function () {
+      await campaign.connect(owner).verifyCampaign();
+      expect(await campaign.isVerified()).to.be.true;
+    });
+
+    it("should emit CampaignReported when reported", async function () {
+      await expect(campaign.connect(contributor1).reportCampaign())
+        .to.emit(campaign, "CampaignReported")
+        .withArgs(contributor1.address);
+    });
+
+    it("should emit CampaignVerified when admin verifies", async function () {
+      await expect(campaign.connect(owner).verifyCampaign())
+        .to.emit(campaign, "CampaignVerified")
+        .withArgs(owner.address);
+    });
+
+    it("non-admin verifying campaign should revert", async function () {
+      await expect(
+        campaign.connect(contributor1).verifyCampaign()
+      ).to.be.revertedWithCustomError(campaign, "NotAdmin");
+    });
+
+    it("duplicate report by same address should revert", async function () {
+      await campaign.connect(contributor2).reportCampaign();
+      await expect(
+        campaign.connect(contributor2).reportCampaign()
+      ).to.be.revertedWithCustomError(campaign, "AlreadyReported");
+    });
+  });
 });

@@ -49,6 +49,15 @@ export async function connectDb(): Promise<void> {
       );
     `);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_campaign_reports_campaign_id ON campaign_reports(campaign_id);`);
+    try {
+      await client.query(`
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_campaign_reports_campaign_reporter
+        ON campaign_reports(campaign_id, reporter_wallet)
+      `);
+    } catch (e: unknown) {
+      const err = e as { code?: string };
+      if (err.code !== "42710") throw e;
+    }
 
     const alterQueries = [
       `ALTER TABLE campaigns ADD COLUMN total_raised VARCHAR(78) DEFAULT '0'`,
