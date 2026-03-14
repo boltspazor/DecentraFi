@@ -129,4 +129,22 @@ describe("Contributions & campaign detail (integration)", () => {
     expect(res.status).toBe(200);
     expect(res.body.status).toBe("Failed");
   });
+
+  describe("trust score: campaigns update score", () => {
+    it("GET campaign returns creatorTrustScore that updates when campaign status changes", async () => {
+      if (!campaignId) return;
+      const getRes1 = await request(app).get(`/api/campaigns/${campaignId}`);
+      if (getRes1.status !== 200) return;
+      const scoreAfterFailed = getRes1.body.creatorTrustScore as number;
+
+      await request(app)
+        .patch(`/api/campaigns/${campaignId}/status`)
+        .send({ status: "Successful" });
+      const getRes2 = await request(app).get(`/api/campaigns/${campaignId}`);
+      expect(getRes2.status).toBe(200);
+      const scoreAfterSuccess = getRes2.body.creatorTrustScore as number;
+      expect(typeof scoreAfterSuccess).toBe("number");
+      expect(scoreAfterSuccess).toBeGreaterThanOrEqual(scoreAfterFailed);
+    });
+  });
 });

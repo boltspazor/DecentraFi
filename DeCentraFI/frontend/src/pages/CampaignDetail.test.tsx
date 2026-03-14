@@ -128,13 +128,38 @@ describe("CampaignDetail", () => {
     expect(screen.getByText(/0% funded/)).toBeInTheDocument();
   });
 
-  it("displays creator trust score when present", async () => {
+  it("displays creator trust score correctly when present", async () => {
     renderCampaignDetail();
     await waitFor(() => {
       expect(screen.getByRole("heading", { name: /test campaign/i })).toBeInTheDocument();
     });
     expect(screen.getByText(/Trust Score:/)).toBeInTheDocument();
     expect(screen.getByText(/8\/10/)).toBeInTheDocument();
+    expect(screen.getByText(/⭐/)).toBeInTheDocument();
+  });
+
+  it("does not show trust score row when creatorTrustScore is missing", async () => {
+    vi.mocked(api.getCampaign).mockResolvedValueOnce({
+      ...mockCampaignMeta,
+      creatorTrustScore: undefined,
+    } as never);
+    renderCampaignDetail();
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: /test campaign/i })).toBeInTheDocument();
+    });
+    expect(screen.queryByText(/Trust Score:/)).not.toBeInTheDocument();
+  });
+
+  it("handles missing score without crashing (campaign meta without creatorTrustScore)", async () => {
+    const metaWithoutScore = { ...mockCampaignMeta };
+    delete (metaWithoutScore as { creatorTrustScore?: number }).creatorTrustScore;
+    vi.mocked(api.getCampaign).mockResolvedValueOnce(metaWithoutScore as never);
+    renderCampaignDetail();
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: /test campaign/i })).toBeInTheDocument();
+    });
+    expect(screen.getByText("Description")).toBeInTheDocument();
+    expect(screen.queryByText(/Trust Score:/)).not.toBeInTheDocument();
   });
 
   it("rejects zero amount and shows error", async () => {
