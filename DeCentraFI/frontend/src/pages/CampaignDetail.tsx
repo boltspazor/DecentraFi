@@ -39,6 +39,10 @@ export function CampaignDetail() {
   const [contributeError, setContributeError] = useState<string | null>(null);
   const [contributeSuccessTx, setContributeSuccessTx] = useState<string | null>(null);
   const [countdown, setCountdown] = useState("");
+  const [reportReason, setReportReason] = useState("");
+  const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
+  const [reportSuccess, setReportSuccess] = useState(false);
   const processedTxRef = useRef<string | null>(null);
 
   const campaignAddress = campaignMeta?.campaignAddress
@@ -282,7 +286,19 @@ export function CampaignDetail() {
         ← Back to campaigns
       </Link>
 
-      <h1 className="text-2xl font-bold text-gray-900 mb-2">{campaignMeta.title}</h1>
+      <div className="flex flex-wrap items-center gap-2 mb-2">
+        <h1 className="text-2xl font-bold text-gray-900">{campaignMeta.title}</h1>
+        {campaignMeta.isVerified && (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-sm font-medium bg-green-100 text-green-800">
+            ✔ Verified Campaign
+          </span>
+        )}
+        {(campaignMeta.reportCount ?? 0) > 0 && !campaignMeta.isVerified && (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-sm font-medium bg-amber-100 text-amber-800">
+            ⚠ Reported Campaign
+          </span>
+        )}
+      </div>
       <p className="text-gray-600 whitespace-pre-wrap mb-6">{campaignMeta.description}</p>
 
       <div className="mb-6 p-4 bg-gray-50 rounded-lg">
@@ -316,6 +332,56 @@ export function CampaignDetail() {
           </p>
         )}
       </div>
+
+      {isConnected && address && !campaignMeta.isVerified && (
+        <div className="mb-6 p-4 border border-gray-200 rounded-lg">
+          <h2 className="text-lg font-semibold mb-2">Report Campaign</h2>
+          <p className="text-sm text-gray-600 mb-2">
+            Seen something wrong? Submit a report for moderators to review.
+          </p>
+          {reportSuccess ? (
+            <p className="text-sm text-green-600">Report submitted. Thank you.</p>
+          ) : (
+            <>
+              <textarea
+                placeholder="Reason (optional)"
+                value={reportReason}
+                onChange={(e) => setReportReason(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mb-2"
+                rows={2}
+              />
+              <button
+                type="button"
+                disabled={reportSubmitting}
+                onClick={async () => {
+                  setReportError(null);
+                  setReportSubmitting(true);
+                  try {
+                    await api.reportCampaign({
+                      campaignId: campaignMeta.id,
+                      reporterWallet: address,
+                      reason: reportReason.trim() || undefined,
+                    });
+                    setReportSuccess(true);
+                    const updated = await api.getCampaign(String(campaignMeta.id));
+                    setCampaignMeta(updated);
+                  } catch (e) {
+                    setReportError(e instanceof Error ? e.message : "Failed to submit report");
+                  } finally {
+                    setReportSubmitting(false);
+                  }
+                }}
+                className="px-4 py-2 bg-amber-600 text-white rounded hover:bg-amber-700 disabled:opacity-50 text-sm"
+              >
+                {reportSubmitting ? "Submitting…" : "Report Campaign"}
+              </button>
+              {reportError && (
+                <p className="mt-2 text-sm text-red-600">{reportError}</p>
+              )}
+            </>
+          )}
+        </div>
+      )}
 
       {isWrongNetwork && switchChain && (
         <div className="mb-4 p-3 rounded bg-amber-50 text-amber-800">

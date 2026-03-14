@@ -23,14 +23,32 @@ export interface CampaignMeta {
   txHash: string | null;
   totalRaised?: string;
   status?: string;
+  isVerified?: boolean;
   createdAt: string;
 }
 
-/** GET /campaigns/:id response: campaign + optional contributors + creator trust score. */
+/** GET /campaigns/:id response: campaign + optional contributors + creator trust score + reportCount. */
 export interface GetCampaignResponse extends CampaignMeta {
   contributors?: ContributionMeta[];
   /** Creator trust score 0–10 from successful/failed campaign history. */
   creatorTrustScore?: number;
+  /** Number of reports submitted for this campaign. */
+  reportCount?: number;
+}
+
+export interface ReportItem {
+  id: number;
+  campaignId: number;
+  reporterWallet: string;
+  reason: string | null;
+  createdAt: string;
+}
+
+export interface ReportedCampaignItem {
+  id: number;
+  title: string;
+  campaignAddress: string;
+  isVerified: boolean;
 }
 
 export interface CampaignSearchParams {
@@ -134,6 +152,77 @@ export async function getCampaign(id: string): Promise<GetCampaignResponse> {
     }
     throw new ApiError(message, res.status);
   }
+  return res.json();
+}
+
+export async function reportCampaign(data: {
+  campaignId: number;
+  reporterWallet: string;
+  reason?: string;
+}): Promise<ReportItem> {
+  const res = await fetch(`${API_BASE}/api/campaigns/report`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    let message = text;
+    try {
+      const json = JSON.parse(text) as { error?: string };
+      if (json.error) message = json.error;
+    } catch {
+      //
+    }
+    throw new ApiError(message, res.status);
+  }
+  return res.json();
+}
+
+export async function getReportsByCampaignId(campaignId: number): Promise<ReportItem[]> {
+  const res = await fetch(`${API_BASE}/api/campaigns/reports/${campaignId}`);
+  if (!res.ok) {
+    const text = await res.text();
+    let message = text;
+    try {
+      const json = JSON.parse(text) as { error?: string };
+      if (json.error) message = json.error;
+    } catch {
+      //
+    }
+    throw new ApiError(message, res.status);
+  }
+  return res.json();
+}
+
+export async function verifyCampaign(
+  campaignId: number,
+  adminWallet: string
+): Promise<{ id: number; isVerified: boolean; title: string }> {
+  const res = await fetch(`${API_BASE}/api/campaigns/${campaignId}/verify`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", "X-Admin-Wallet": adminWallet },
+    body: JSON.stringify({ adminWallet }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    let message = text;
+    try {
+      const json = JSON.parse(text) as { error?: string };
+      if (json.error) message = json.error;
+    } catch {
+      //
+    }
+    throw new ApiError(message, res.status);
+  }
+  return res.json();
+}
+
+export async function getReportedCampaigns(): Promise<{
+  campaigns: ReportedCampaignItem[];
+}> {
+  const res = await fetch(`${API_BASE}/api/campaigns/reported`);
+  if (!res.ok) throw new ApiError("Failed to fetch reported campaigns", res.status);
   return res.json();
 }
 

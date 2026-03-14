@@ -23,6 +23,9 @@ export function Navbar() {
         <Link to="/create" className="text-gray-600 hover:text-gray-900">
           Create Campaign
         </Link>
+        <Link to="/admin" className="text-gray-600 hover:text-gray-900">
+          Admin
+        </Link>
         <WalletConnectButton />
       </div>
     </nav>

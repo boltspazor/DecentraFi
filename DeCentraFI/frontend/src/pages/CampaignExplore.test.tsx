@@ -80,9 +80,8 @@ describe("CampaignExplorePage (search & filters)", () => {
     expect(calls.length).toBeGreaterThanOrEqual(2);
     const lastCall = calls[calls.length - 1];
     const args = lastCall?.[0];
-    expect(args).toBeDefined();
-    expect(args!.q).toBe("education");
-    expect(args!.status).toBe("Successful");
+    expect(args?.q).toBe("education");
+    expect(args?.status).toBe("Successful");
   });
 
   it("shows campaigns as cards and supports pagination controls", async () => {
@@ -160,8 +159,7 @@ describe("CampaignExplorePage (search & filters)", () => {
     });
     const secondCall = vi.mocked(searchCampaigns).mock.calls[1];
     const args = secondCall?.[0];
-    expect(args).toBeDefined();
-    expect(args!.page).toBe(2);
+    expect(args?.page).toBe(2);
   });
 });
 

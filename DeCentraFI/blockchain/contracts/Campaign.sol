@@ -9,6 +9,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
  */
 contract Campaign is ReentrancyGuard {
     address public creator;
+    address public admin;
     uint256 public goal;
     uint256 public deadline;
     uint256 public totalContributed;
@@ -19,6 +20,9 @@ contract Campaign is ReentrancyGuard {
     bool public fundsReleased;
     bool public refundEnabled;
     bool public finalized;
+    bool public isVerified;
+    uint256 public reportCount;
+    mapping(address => bool) public reporters;
     mapping(address => uint256) public contributions;
 
     struct Milestone {
@@ -41,6 +45,8 @@ contract Campaign is ReentrancyGuard {
     event MilestoneCreated(uint256 indexed milestoneId, uint256 percentage);
     event MilestoneApproved(uint256 indexed milestoneId, address indexed voter, uint256 weight);
     event MilestoneFundsReleased(uint256 indexed milestoneId, uint256 amount);
+    event CampaignReported(address indexed reporter);
+    event CampaignVerified(address indexed verifier);
 
     error ZeroContribution();
     error CampaignEnded();
@@ -61,11 +67,33 @@ contract Campaign is ReentrancyGuard {
     error NotContributor();
     error MilestoneNotApproved();
     error NoFundsToRelease();
+    error NotAdmin();
+    error AlreadyReported();
 
-    constructor(address _creator, uint256 _goal, uint256 _deadline) {
+    modifier onlyAdmin() {
+        if (msg.sender != admin) revert NotAdmin();
+        _;
+    }
+
+    constructor(address _creator, uint256 _goal, uint256 _deadline, address _admin) {
         creator = _creator;
+        admin = _admin;
         goal = _goal;
         deadline = _deadline;
+    }
+
+    /// @notice Report this campaign (one report per address).
+    function reportCampaign() external {
+        if (reporters[msg.sender]) revert AlreadyReported();
+        reporters[msg.sender] = true;
+        reportCount += 1;
+        emit CampaignReported(msg.sender);
+    }
+
+    /// @notice Mark campaign as verified. Only admin (e.g. factory owner) can call.
+    function verifyCampaign() external onlyAdmin {
+        isVerified = true;
+        emit CampaignVerified(msg.sender);
     }
 
     /// @notice Define milestones as percentages totaling 100. Callable once by creator before funds logic depends on them.

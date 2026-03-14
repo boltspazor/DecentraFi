@@ -37,7 +37,14 @@ function CampaignCard({ c }: { c: CampaignMeta }) {
   return (
     <Link to={`/campaigns/${c.id}`}>
       <article className="p-4 border border-gray-200 rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow">
-        <h2 className="text-lg font-semibold text-gray-900 mb-1">{c.title || "Untitled"}</h2>
+        <div className="flex items-center gap-2 mb-1">
+          <h2 className="text-lg font-semibold text-gray-900">{c.title || "Untitled"}</h2>
+          {c.isVerified && (
+            <span className="text-xs font-medium text-green-700 bg-green-100 px-1.5 py-0.5 rounded">
+              ✔ Verified
+            </span>
+          )}
+        </div>
         <p className="text-xs text-gray-500 mb-2">
           Creator: <span className="font-mono">{creator}</span>
         </p>

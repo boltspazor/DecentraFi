@@ -39,9 +39,21 @@ export async function connectDb(): Promise<void> {
     await client.query(`CREATE INDEX IF NOT EXISTS idx_contributions_campaign_id ON contributions(campaign_id);`);
     await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_contributions_tx_hash ON contributions(tx_hash);`);
 
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS campaign_reports (
+        id SERIAL PRIMARY KEY,
+        campaign_id INTEGER NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
+        reporter_wallet VARCHAR(42) NOT NULL,
+        reason TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_campaign_reports_campaign_id ON campaign_reports(campaign_id);`);
+
     const alterQueries = [
       `ALTER TABLE campaigns ADD COLUMN total_raised VARCHAR(78) DEFAULT '0'`,
       `ALTER TABLE campaigns ADD COLUMN status VARCHAR(20) DEFAULT 'Active'`,
+      `ALTER TABLE campaigns ADD COLUMN is_verified BOOLEAN DEFAULT FALSE`,
     ];
     for (const q of alterQueries) {
       try {

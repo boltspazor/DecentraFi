@@ -112,6 +112,34 @@ export const campaignAbi = [
     stateMutability: "view",
   },
   {
+    type: "function",
+    name: "isVerified",
+    inputs: [],
+    outputs: [{ name: "", type: "bool", internalType: "bool" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "reportCount",
+    inputs: [],
+    outputs: [{ name: "", type: "uint256", internalType: "uint256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "reportCampaign",
+    inputs: [],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "verifyCampaign",
+    inputs: [],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
     type: "event",
     name: "Contributed",
     inputs: [
@@ -142,5 +170,15 @@ export const campaignAbi = [
       { name: "contributor", type: "address", indexed: true, internalType: "address" },
       { name: "amount", type: "uint256", indexed: false, internalType: "uint256" },
     ],
+  },
+  {
+    type: "event",
+    name: "CampaignReported",
+    inputs: [{ name: "reporter", type: "address", indexed: true, internalType: "address" }],
+  },
+  {
+    type: "event",
+    name: "CampaignVerified",
+    inputs: [{ name: "verifier", type: "address", indexed: true, internalType: "address" }],
   },
 ] as const;

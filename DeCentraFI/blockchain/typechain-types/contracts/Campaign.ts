@@ -26,6 +26,7 @@ import type {
 export interface CampaignInterface extends Interface {
   getFunction(
     nameOrSignature:
+      | "admin"
       | "approveMilestone"
       | "claimRefund"
       | "closed"
@@ -39,6 +40,7 @@ export interface CampaignInterface extends Interface {
       | "fundsWithdrawn"
       | "goal"
       | "goalReached"
+      | "isVerified"
       | "milestoneApprovalWeight"
       | "milestoneVoted"
       | "milestones"
@@ -46,16 +48,22 @@ export interface CampaignInterface extends Interface {
       | "refundEnabled"
       | "releaseFunds"
       | "releaseMilestoneFunds"
+      | "reportCampaign"
+      | "reportCount"
+      | "reporters"
       | "setMilestones"
       | "totalContributed"
       | "totalMilestoneReleased"
       | "totalRaised"
+      | "verifyCampaign"
       | "withdrawFunds"
   ): FunctionFragment;
 
   getEvent(
     nameOrSignatureOrTopic:
       | "CampaignClosed"
+      | "CampaignReported"
+      | "CampaignVerified"
       | "Contributed"
       | "ContributionReceived"
       | "FundsReleased"
@@ -67,6 +75,7 @@ export interface CampaignInterface extends Interface {
       | "Withdrawal"
   ): EventFragment;
 
+  encodeFunctionData(functionFragment: "admin", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "approveMilestone",
     values: [BigNumberish]
@@ -105,6 +114,10 @@ export interface CampaignInterface extends Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
+    functionFragment: "isVerified",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
     functionFragment: "milestoneApprovalWeight",
     values: [BigNumberish]
   ): string;
@@ -130,6 +143,18 @@ export interface CampaignInterface extends Interface {
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
+    functionFragment: "reportCampaign",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "reportCount",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "reporters",
+    values: [AddressLike]
+  ): string;
+  encodeFunctionData(
     functionFragment: "setMilestones",
     values: [BigNumberish[]]
   ): string;
@@ -146,10 +171,15 @@ export interface CampaignInterface extends Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
+    functionFragment: "verifyCampaign",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
     functionFragment: "withdrawFunds",
     values?: undefined
   ): string;
 
+  decodeFunctionResult(functionFragment: "admin", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "approveMilestone",
     data: BytesLike
@@ -184,6 +214,7 @@ export interface CampaignInterface extends Interface {
     functionFragment: "goalReached",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "isVerified", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "milestoneApprovalWeight",
     data: BytesLike
@@ -207,6 +238,15 @@ export interface CampaignInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "reportCampaign",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "reportCount",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(functionFragment: "reporters", data: BytesLike): Result;
+  decodeFunctionResult(
     functionFragment: "setMilestones",
     data: BytesLike
   ): Result;
@@ -223,6 +263,10 @@ export interface CampaignInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "verifyCampaign",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "withdrawFunds",
     data: BytesLike
   ): Result;
@@ -233,6 +277,30 @@ export namespace CampaignClosedEvent {
   export type OutputTuple = [goalReached: boolean];
   export interface OutputObject {
     goalReached: boolean;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace CampaignReportedEvent {
+  export type InputTuple = [reporter: AddressLike];
+  export type OutputTuple = [reporter: string];
+  export interface OutputObject {
+    reporter: string;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace CampaignVerifiedEvent {
+  export type InputTuple = [verifier: AddressLike];
+  export type OutputTuple = [verifier: string];
+  export interface OutputObject {
+    verifier: string;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Filter = TypedDeferredTopicFilter<Event>;
@@ -412,6 +480,8 @@ export interface Campaign extends BaseContract {
     event?: TCEvent
   ): Promise<this>;
 
+  admin: TypedContractMethod<[], [string], "view">;
+
   approveMilestone: TypedContractMethod<
     [milestoneId: BigNumberish],
     [void],
@@ -441,6 +511,8 @@ export interface Campaign extends BaseContract {
   goal: TypedContractMethod<[], [bigint], "view">;
 
   goalReached: TypedContractMethod<[], [boolean], "view">;
+
+  isVerified: TypedContractMethod<[], [boolean], "view">;
 
   milestoneApprovalWeight: TypedContractMethod<
     [arg0: BigNumberish],
@@ -472,6 +544,12 @@ export interface Campaign extends BaseContract {
     "nonpayable"
   >;
 
+  reportCampaign: TypedContractMethod<[], [void], "nonpayable">;
+
+  reportCount: TypedContractMethod<[], [bigint], "view">;
+
+  reporters: TypedContractMethod<[arg0: AddressLike], [boolean], "view">;
+
   setMilestones: TypedContractMethod<
     [percentages: BigNumberish[]],
     [void],
@@ -484,12 +562,17 @@ export interface Campaign extends BaseContract {
 
   totalRaised: TypedContractMethod<[], [bigint], "view">;
 
+  verifyCampaign: TypedContractMethod<[], [void], "nonpayable">;
+
   withdrawFunds: TypedContractMethod<[], [void], "nonpayable">;
 
   getFunction<T extends ContractMethod = ContractMethod>(
     key: string | FunctionFragment
   ): T;
 
+  getFunction(
+    nameOrSignature: "admin"
+  ): TypedContractMethod<[], [string], "view">;
   getFunction(
     nameOrSignature: "approveMilestone"
   ): TypedContractMethod<[milestoneId: BigNumberish], [void], "nonpayable">;
@@ -530,6 +613,9 @@ export interface Campaign extends BaseContract {
     nameOrSignature: "goalReached"
   ): TypedContractMethod<[], [boolean], "view">;
   getFunction(
+    nameOrSignature: "isVerified"
+  ): TypedContractMethod<[], [boolean], "view">;
+  getFunction(
     nameOrSignature: "milestoneApprovalWeight"
   ): TypedContractMethod<[arg0: BigNumberish], [bigint], "view">;
   getFunction(
@@ -559,6 +645,15 @@ export interface Campaign extends BaseContract {
     nameOrSignature: "releaseMilestoneFunds"
   ): TypedContractMethod<[milestoneId: BigNumberish], [void], "nonpayable">;
   getFunction(
+    nameOrSignature: "reportCampaign"
+  ): TypedContractMethod<[], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "reportCount"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "reporters"
+  ): TypedContractMethod<[arg0: AddressLike], [boolean], "view">;
+  getFunction(
     nameOrSignature: "setMilestones"
   ): TypedContractMethod<[percentages: BigNumberish[]], [void], "nonpayable">;
   getFunction(
@@ -571,6 +666,9 @@ export interface Campaign extends BaseContract {
     nameOrSignature: "totalRaised"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
+    nameOrSignature: "verifyCampaign"
+  ): TypedContractMethod<[], [void], "nonpayable">;
+  getFunction(
     nameOrSignature: "withdrawFunds"
   ): TypedContractMethod<[], [void], "nonpayable">;
 
@@ -580,6 +678,20 @@ export interface Campaign extends BaseContract {
     CampaignClosedEvent.InputTuple,
     CampaignClosedEvent.OutputTuple,
     CampaignClosedEvent.OutputObject
+  >;
+  getEvent(
+    key: "CampaignReported"
+  ): TypedContractEvent<
+    CampaignReportedEvent.InputTuple,
+    CampaignReportedEvent.OutputTuple,
+    CampaignReportedEvent.OutputObject
+  >;
+  getEvent(
+    key: "CampaignVerified"
+  ): TypedContractEvent<
+    CampaignVerifiedEvent.InputTuple,
+    CampaignVerifiedEvent.OutputTuple,
+    CampaignVerifiedEvent.OutputObject
   >;
   getEvent(
     key: "Contributed"
@@ -655,6 +767,28 @@ export interface Campaign extends BaseContract {
       CampaignClosedEvent.InputTuple,
       CampaignClosedEvent.OutputTuple,
       CampaignClosedEvent.OutputObject
+    >;
+
+    "CampaignReported(address)": TypedContractEvent<
+      CampaignReportedEvent.InputTuple,
+      CampaignReportedEvent.OutputTuple,
+      CampaignReportedEvent.OutputObject
+    >;
+    CampaignReported: TypedContractEvent<
+      CampaignReportedEvent.InputTuple,
+      CampaignReportedEvent.OutputTuple,
+      CampaignReportedEvent.OutputObject
+    >;
+
+    "CampaignVerified(address)": TypedContractEvent<
+      CampaignVerifiedEvent.InputTuple,
+      CampaignVerifiedEvent.OutputTuple,
+      CampaignVerifiedEvent.OutputObject
+    >;
+    CampaignVerified: TypedContractEvent<
+      CampaignVerifiedEvent.InputTuple,
+      CampaignVerifiedEvent.OutputTuple,
+      CampaignVerifiedEvent.OutputObject
     >;
 
     "Contributed(address,uint256)": TypedContractEvent<

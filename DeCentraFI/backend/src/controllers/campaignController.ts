@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import * as campaignService from "../services/campaignService.js";
 import * as contributionService from "../services/contributionService.js";
+import * as reportService from "../services/reportService.js";
 import { validateCreateCampaignBody } from "../validation/campaignValidation.js";
 import { validatePatchStatusBody } from "../validation/contributionValidation.js";
 
@@ -116,12 +117,14 @@ export async function getCampaign(req: Request, res: Response) {
       return res.status(404).json({ error: "Campaign not found" });
     }
     const contributors = await contributionService.findByCampaignId(numId);
+    const reportCount = await reportService.getReportCountByCampaignId(numId);
     const payload = formatCampaign(campaign);
     const { trustScore: creatorTrustScore } = await campaignService.getCreatorTrustScore(campaign.creator);
-    /** Response shape: campaign (camelCase, dates ISO) + contributors[] (camelCase) + creatorTrustScore for frontend. */
+    /** Response shape: campaign (camelCase, dates ISO) + contributors[] (camelCase) + creatorTrustScore + reportCount. */
     return res.json({
       ...payload,
       creatorTrustScore,
+      reportCount,
       contributors: contributors.map((c) => ({
         id: c.id,
         contributorAddress: c.contributor_address,
@@ -171,6 +174,7 @@ function formatCampaign(row: campaignService.CampaignRow) {
     txHash: row.tx_hash,
     totalRaised: row.total_raised ?? "0",
     status: row.status ?? "Active",
+    isVerified: row.is_verified ?? false,
     createdAt: row.created_at,
   };
 }

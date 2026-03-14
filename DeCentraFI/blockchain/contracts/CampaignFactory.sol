@@ -7,14 +7,19 @@ error InvalidGoal();
 error InvalidDeadline();
 
 contract CampaignFactory {
+    address public admin;
     Campaign[] public campaigns;
 
     event CampaignCreated(address indexed campaign, address indexed creator, uint256 goal, uint256 deadline);
 
+    constructor() {
+        admin = msg.sender;
+    }
+
     function createCampaign(uint256 _goal, uint256 _deadline) external returns (address) {
         if (_goal == 0) revert InvalidGoal();
         if (_deadline <= block.timestamp) revert InvalidDeadline();
-        Campaign campaign = new Campaign(msg.sender, _goal, _deadline);
+        Campaign campaign = new Campaign(msg.sender, _goal, _deadline, admin);
         campaigns.push(campaign);
         emit CampaignCreated(address(campaign), msg.sender, _goal, _deadline);
         return address(campaign);

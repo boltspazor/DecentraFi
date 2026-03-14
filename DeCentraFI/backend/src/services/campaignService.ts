@@ -11,6 +11,7 @@ export interface CampaignRow {
   tx_hash: string | null;
   total_raised?: string;
   status?: string;
+  is_verified?: boolean;
   created_at: Date;
 }
 
@@ -81,6 +82,10 @@ export async function updateTotalRaisedAndStatus(
     "UPDATE campaigns SET total_raised = $1, status = $2 WHERE id = $3",
     [totalRaised, status, campaignId]
   );
+}
+
+export async function updateVerified(campaignId: number, isVerified: boolean): Promise<void> {
+  await pool.query("UPDATE campaigns SET is_verified = $1 WHERE id = $2", [isVerified, campaignId]);
 }
 
 export interface SearchCampaignsOptions {

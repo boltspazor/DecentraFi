@@ -25,11 +25,12 @@ import type {
 
 export interface CampaignFactoryInterface extends Interface {
   getFunction(
-    nameOrSignature: "campaigns" | "createCampaign" | "getCampaigns"
+    nameOrSignature: "admin" | "campaigns" | "createCampaign" | "getCampaigns"
   ): FunctionFragment;
 
   getEvent(nameOrSignatureOrTopic: "CampaignCreated"): EventFragment;
 
+  encodeFunctionData(functionFragment: "admin", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "campaigns",
     values: [BigNumberish]
@@ -43,6 +44,7 @@ export interface CampaignFactoryInterface extends Interface {
     values?: undefined
   ): string;
 
+  decodeFunctionResult(functionFragment: "admin", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "campaigns", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "createCampaign",
@@ -122,6 +124,8 @@ export interface CampaignFactory extends BaseContract {
     event?: TCEvent
   ): Promise<this>;
 
+  admin: TypedContractMethod<[], [string], "view">;
+
   campaigns: TypedContractMethod<[arg0: BigNumberish], [string], "view">;
 
   createCampaign: TypedContractMethod<
@@ -136,6 +140,9 @@ export interface CampaignFactory extends BaseContract {
     key: string | FunctionFragment
   ): T;
 
+  getFunction(
+    nameOrSignature: "admin"
+  ): TypedContractMethod<[], [string], "view">;
   getFunction(
     nameOrSignature: "campaigns"
   ): TypedContractMethod<[arg0: BigNumberish], [string], "view">;
