@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { type CampaignMeta, type CampaignSearchResult, searchCampaigns } from "../services/api";
 
 function toWei(valueEth: string | undefined): string | undefined {
@@ -15,13 +15,6 @@ function toWei(valueEth: string | undefined): string | undefined {
   } catch {
     return undefined;
   }
-}
-
-function formatEth(wei: string | undefined): string {
-  if (!wei) return "0.0000";
-  const num = Number(wei);
-  if (!Number.isFinite(num)) return "0.0000";
-  return (num / 1e18).toFixed(4);
 }
 
 function formatDate(iso: string): string {
@@ -114,7 +107,7 @@ export function CampaignExplorePage() {
 
   const { data, isLoading, isFetching, error, refetch } = useQuery<CampaignSearchResult>({
     queryKey,
-    queryFn: () =>
+    queryFn: (): Promise<CampaignSearchResult> =>
       searchCampaigns({
         q: keyword || undefined,
         status: status ? (status === "Active" || status === "Successful" || status === "Failed" ? status : undefined) : undefined,
@@ -124,7 +117,7 @@ export function CampaignExplorePage() {
         page,
         pageSize: 12,
       }),
-    keepPreviousData: true,
+    placeholderData: keepPreviousData,
   });
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
@@ -277,7 +270,7 @@ export function CampaignExplorePage() {
       {data && data.items.length > 0 && (
         <>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-6">
-            {data.items.map((c) => (
+            {data.items.map((c: CampaignMeta) => (
               <CampaignCard key={c.id} c={c} />
             ))}
           </div>

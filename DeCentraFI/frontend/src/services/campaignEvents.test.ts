@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook } from "@testing-library/react";
-import { ethers } from "ethers";
 import { useCampaignEvents } from "./campaignEvents";
 
 const mockContractOn = vi.fn();

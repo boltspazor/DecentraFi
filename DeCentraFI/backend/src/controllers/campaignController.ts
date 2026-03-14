@@ -91,17 +91,17 @@ export async function searchCampaigns(req: Request, res: Response) {
 }
 
 export async function getActiveCampaigns(req: Request, res: Response) {
-  return searchCampaigns({
-    ...req,
-    query: { ...req.query, status: "active" },
-  } as Request, res);
+  return searchCampaigns(
+    { ...req, query: { ...req.query, status: "active" } } as unknown as Request,
+    res
+  );
 }
 
 export async function getSuccessfulCampaigns(req: Request, res: Response) {
-  return searchCampaigns({
-    ...req,
-    query: { ...req.query, status: "successful" },
-  } as Request, res);
+  return searchCampaigns(
+    { ...req, query: { ...req.query, status: "successful" } } as unknown as Request,
+    res
+  );
 }
 
 export async function getCampaign(req: Request, res: Response) {

@@ -78,9 +78,11 @@ describe("CampaignExplorePage (search & filters)", () => {
     });
     const calls = vi.mocked(searchCampaigns).mock.calls;
     expect(calls.length).toBeGreaterThanOrEqual(2);
-    const args = calls[calls.length - 1][0];
-    expect(args.q).toBe("education");
-    expect(args.status).toBe("Successful");
+    const lastCall = calls[calls.length - 1];
+    const args = lastCall?.[0];
+    expect(args).toBeDefined();
+    expect(args!.q).toBe("education");
+    expect(args!.status).toBe("Successful");
   });
 
   it("shows campaigns as cards and supports pagination controls", async () => {
@@ -156,8 +158,10 @@ describe("CampaignExplorePage (search & filters)", () => {
     await waitFor(() => {
       expect(searchCampaigns).toHaveBeenCalledTimes(2);
     });
-    const args = vi.mocked(searchCampaigns).mock.calls[1][0];
-    expect(args.page).toBe(2);
+    const secondCall = vi.mocked(searchCampaigns).mock.calls[1];
+    const args = secondCall?.[0];
+    expect(args).toBeDefined();
+    expect(args!.page).toBe(2);
   });
 });
 
