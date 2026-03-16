@@ -68,7 +68,9 @@ describe("Dashboard", () => {
   it("renders dashboard correctly when connected", async () => {
     renderDashboard();
     expect(screen.getByRole("heading", { name: /your dashboard/i })).toBeInTheDocument();
-    expect(screen.getByText(/overview of campaigns you have contributed to/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/overview of campaigns you have contributed to and your supporter badge nfts/i)
+    ).toBeInTheDocument();
     await waitFor(() => {
       expect(getUserContributions).toHaveBeenCalledWith("0x1234567890123456789012345678901234567890");
     });
@@ -79,6 +81,37 @@ describe("Dashboard", () => {
     renderDashboard();
     await waitFor(() => {
       expect(screen.getByText(/you have not contributed to any campaigns yet/i)).toBeInTheDocument();
+  it("shows empty NFT state when user has no supporter NFTs", async () => {
+    vi.mocked(getUserContributions).mockResolvedValue([]);
+    vi.mocked(getUserNfts).mockResolvedValue([]);
+    renderDashboard();
+    await waitFor(() => {
+      expect(
+        screen.getByText(/you do not have any supporter badge nfts yet/i)
+      ).toBeInTheDocument();
+    });
+  });
+
+  it("renders NFT gallery with metadata when user has NFTs", async () => {
+    vi.mocked(getUserContributions).mockResolvedValue([]);
+    vi.mocked(getUserNfts).mockResolvedValue([
+      {
+        tokenId: 1,
+        campaignId: 42,
+        contributorWallet: "0x1234567890123456789012345678901234567890",
+        nftLevel: "Gold",
+        ipfsHash: "QmHash",
+        createdAt: new Date().toISOString(),
+      },
+    ] as never);
+    renderDashboard();
+    await waitFor(() => {
+      expect(screen.getByText(/gold supporter badge • token #1/i)).toBeInTheDocument();
+    });
+    expect(screen.getByText(/campaign id:/i)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /view nft/i })).toBeInTheDocument();
+  });
+
     });
   });
 
