@@ -80,7 +80,12 @@ describe("Dashboard", () => {
     vi.mocked(getUserContributions).mockResolvedValue([]);
     renderDashboard();
     await waitFor(() => {
-      expect(screen.getByText(/you have not contributed to any campaigns yet/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/you have not contributed to any campaigns yet/i)
+      ).toBeInTheDocument();
+    });
+  });
+
   it("shows empty NFT state when user has no supporter NFTs", async () => {
     vi.mocked(getUserContributions).mockResolvedValue([]);
     vi.mocked(getUserNfts).mockResolvedValue([]);
@@ -106,13 +111,12 @@ describe("Dashboard", () => {
     ] as never);
     renderDashboard();
     await waitFor(() => {
-      expect(screen.getByText(/gold supporter badge • token #1/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/gold supporter badge • token #1/i)
+      ).toBeInTheDocument();
     });
     expect(screen.getByText(/campaign id:/i)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /view nft/i })).toBeInTheDocument();
-  });
-
-    });
   });
 
   it("shows contribution list when user has contributions", async () => {
