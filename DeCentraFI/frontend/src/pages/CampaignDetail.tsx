@@ -10,6 +10,18 @@ import {
   useRefund,
 } from "../services/campaignContract";
 import * as api from "../services/api";
+import { useQuery } from "@tanstack/react-query";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+} from "recharts";
 import { getTransactionErrorMessage } from "../utils/errorMessages";
 
 const SEPOLIA_ETHERSCAN_TX = "https://sepolia.etherscan.io/tx/";
@@ -112,6 +124,17 @@ export function CampaignDetail() {
     refundEnabled &&
     myContribution > 0n;
   const canFinalize = isExpired && !finalized && !closed && !refundEnabled;
+
+  const {
+    data: analytics,
+    isLoading: analyticsLoading,
+    error: analyticsError,
+  } = useQuery<api.CampaignAnalytics>({
+    queryKey: ["campaign-analytics", campaignMeta?.id],
+    enabled: !!campaignMeta?.id,
+    queryFn: () => api.getCampaignAnalytics(campaignMeta!.id),
+    retry: 1,
+  });
 
   useEffect(() => {
     if (!id) return;
@@ -280,6 +303,13 @@ export function CampaignDetail() {
   const raisedEth = (Number(raisedForProgress) / 1e18).toFixed(4);
   const contributorCount = contributions.length;
 
+  const analyticsTimeseries =
+    analytics?.timeseries.map((p) => ({
+      time: new Date(p.timestamp).toLocaleDateString(),
+      cumulativeEth: Number(p.cumulativeWei) / 1e18,
+      contributionCount: p.contributionCount,
+    })) ?? [];
+
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
       <Link to="/" className="text-indigo-600 hover:underline mb-6 inline-block">
@@ -330,6 +360,87 @@ export function CampaignDetail() {
             <span className="text-amber-500">⭐</span> Trust Score:{" "}
             <span className="font-semibold">{campaignMeta.creatorTrustScore}/10</span>
           </p>
+        )}
+      </div>
+
+      <div className="mb-6 p-4 bg-white rounded-lg border border-gray-200">
+        <h2 className="text-lg font-semibold mb-2">Campaign Analytics</h2>
+        {analyticsLoading && <p className="text-sm text-gray-500">Loading analytics…</p>}
+        {analyticsError && !analyticsLoading && (
+          <p className="text-sm text-red-600">Failed to load analytics.</p>
+        )}
+        {analytics && !analyticsLoading && !analyticsError && (
+          <>
+            <div className="grid grid-cols-2 gap-3 text-sm mb-4">
+              <div>
+                <p className="text-gray-500">Total contributions</p>
+                <p className="font-semibold">
+                  {(Number(analytics.totalContributionsWei) / 1e18).toFixed(4)} ETH
+                </p>
+              </div>
+              <div>
+                <p className="text-gray-500">Unique contributors</p>
+                <p className="font-semibold">{analytics.uniqueContributors}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">Average donation</p>
+                <p className="font-semibold">
+                  {(Number(analytics.averageContributionWei) / 1e18).toFixed(4)} ETH
+                </p>
+              </div>
+              <div>
+                <p className="text-gray-500">Goal completion</p>
+                <p className="font-semibold">{analytics.goalCompletionPercentage}%</p>
+              </div>
+            </div>
+            {analyticsTimeseries.length > 0 && (
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm font-medium text-gray-700 mb-1">
+                    Funding progress over time
+                  </p>
+                  <div className="h-40">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={analyticsTimeseries}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                        <XAxis dataKey="time" tick={{ fontSize: 10 }} />
+                        <YAxis
+                          tick={{ fontSize: 10 }}
+                          tickFormatter={(v) => `${v.toFixed(2)}`}
+                        />
+                        <Tooltip
+                          formatter={(value: number) => [`${value.toFixed(4)} ETH`, "Cumulative"]}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="cumulativeEth"
+                          stroke="#4f46e5"
+                          strokeWidth={2}
+                          dot={false}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-700 mb-1">
+                    Contribution distribution
+                  </p>
+                  <div className="h-32">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={analyticsTimeseries}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                        <XAxis dataKey="time" tick={{ fontSize: 10 }} />
+                        <YAxis tick={{ fontSize: 10 }} />
+                        <Tooltip />
+                        <Bar dataKey="contributionCount" fill="#10b981" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
 

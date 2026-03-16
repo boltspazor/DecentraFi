@@ -68,6 +68,27 @@ export interface CampaignSearchResult {
   pageSize: number;
 }
 
+export interface CampaignAnalytics {
+  campaignId: number;
+  totalContributionsWei: string;
+  uniqueContributors: number;
+  averageContributionWei: string;
+  fundingSpeedWeiPerHour: string;
+  goalCompletionPercentage: number;
+  timeseries: {
+    timestamp: string;
+    cumulativeWei: string;
+    contributionCount: number;
+  }[];
+}
+
+export interface GlobalAnalytics {
+  totalContributionsWei: string;
+  uniqueContributors: number;
+  totalCampaigns: number;
+  averageContributionWei: string;
+}
+
 export async function createCampaign(data: {
   title: string;
   description: string;
@@ -141,6 +162,38 @@ export async function searchCampaigns(params: CampaignSearchParams): Promise<Cam
 
 export async function getCampaign(id: string): Promise<GetCampaignResponse> {
   const res = await fetch(`${API_BASE}/api/campaigns/${id}`);
+  if (!res.ok) {
+    const text = await res.text();
+    let message = text;
+    try {
+      const json = JSON.parse(text) as { error?: string };
+      if (json.error) message = json.error;
+    } catch {
+      //
+    }
+    throw new ApiError(message, res.status);
+  }
+  return res.json();
+}
+
+export async function getCampaignAnalytics(id: number): Promise<CampaignAnalytics> {
+  const res = await fetch(`${API_BASE}/api/analytics/campaign/${id}`);
+  if (!res.ok) {
+    const text = await res.text();
+    let message = text;
+    try {
+      const json = JSON.parse(text) as { error?: string };
+      if (json.error) message = json.error;
+    } catch {
+      //
+    }
+    throw new ApiError(message, res.status);
+  }
+  return res.json();
+}
+
+export async function getGlobalAnalytics(): Promise<GlobalAnalytics> {
+  const res = await fetch(`${API_BASE}/api/analytics/global`);
   if (!res.ok) {
     const text = await res.text();
     let message = text;

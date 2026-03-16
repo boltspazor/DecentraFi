@@ -25,6 +25,7 @@ vi.mock("../services/api", () => ({
   getContributionsByCampaign: vi.fn(),
   postContribution: vi.fn(),
   reportCampaign: vi.fn(),
+  getCampaignAnalytics: vi.fn(),
 }));
 
 vi.mock("wagmi", () => ({
@@ -128,6 +129,32 @@ describe("CampaignDetail", () => {
       expect(screen.getByText(/goal:/i)).toBeInTheDocument();
     });
     expect(screen.getByText(/0% funded/)).toBeInTheDocument();
+  });
+
+  it("renders analytics panel when analytics data is available", async () => {
+    vi.mocked(api.getCampaignAnalytics).mockResolvedValue({
+      campaignId: 1,
+      totalContributionsWei: "1000000000000000000",
+      uniqueContributors: 2,
+      averageContributionWei: "500000000000000000",
+      fundingSpeedWeiPerHour: "0",
+      goalCompletionPercentage: 10,
+      timeseries: [
+        {
+          timestamp: new Date().toISOString(),
+          cumulativeWei: "1000000000000000000",
+          contributionCount: 1,
+        },
+      ],
+    } as never);
+    renderCampaignDetail();
+    await waitFor(() => {
+      expect(screen.getByText(/campaign analytics/i)).toBeInTheDocument();
+    });
+    expect(screen.getByText(/total contributions/i)).toBeInTheDocument();
+    expect(screen.getByText(/unique contributors/i)).toBeInTheDocument();
+    expect(screen.getByText(/average donation/i)).toBeInTheDocument();
+    expect(screen.getByText(/goal completion/i)).toBeInTheDocument();
   });
 
   it("displays creator trust score correctly when present", async () => {
