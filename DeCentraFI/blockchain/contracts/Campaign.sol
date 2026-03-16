@@ -34,6 +34,15 @@ contract Campaign is ReentrancyGuard {
     mapping(uint256 => uint256) public milestoneApprovalWeight;
     mapping(uint256 => mapping(address => bool)) public milestoneVoted;
 
+    struct Proposal {
+        string description;
+        uint256 voteCount;
+        bool executed;
+    }
+
+    Proposal[] public proposals;
+    mapping(uint256 => mapping(address => bool)) public proposalVoted;
+
     event Contributed(address indexed contributor, uint256 amount);
     event ContributionReceived(address indexed contributor, uint256 amount);
     event Withdrawal(address indexed creator, uint256 amount);
@@ -47,6 +56,9 @@ contract Campaign is ReentrancyGuard {
     event MilestoneFundsReleased(uint256 indexed milestoneId, uint256 amount);
     event CampaignReported(address indexed reporter);
     event CampaignVerified(address indexed verifier);
+    event ProposalCreated(uint256 indexed proposalId, string description);
+    event ProposalVoted(uint256 indexed proposalId, address indexed voter);
+    event ProposalExecuted(uint256 indexed proposalId);
 
     error ZeroContribution();
     error CampaignEnded();
@@ -69,6 +81,9 @@ contract Campaign is ReentrancyGuard {
     error NoFundsToRelease();
     error NotAdmin();
     error AlreadyReported();
+    error AlreadyVoted();
+    error InvalidProposalId();
+    error ProposalAlreadyExecuted();
 
     modifier onlyAdmin() {
         if (msg.sender != admin) revert NotAdmin();
@@ -243,6 +258,46 @@ contract Campaign is ReentrancyGuard {
             fundsReleased = true;
             fundsWithdrawn = true;
         }
+    }
+
+    /// @notice Total number of governance proposals created for this campaign.
+    function getProposalCount() external view returns (uint256) {
+        return proposals.length;
+    }
+
+    /// @notice Create a new governance proposal about this campaign.
+    /// Only creator or contributors may create proposals.
+    function createProposal(string calldata description) external {
+        if (msg.sender != creator && contributions[msg.sender] == 0) {
+            revert NotContributor();
+        }
+        proposals.push(Proposal({description: description, voteCount: 0, executed: false}));
+        uint256 proposalId = proposals.length - 1;
+        emit ProposalCreated(proposalId, description);
+    }
+
+    /// @notice Vote on an existing proposal. Only contributors may vote; one vote per address.
+    function voteProposal(uint256 proposalId) external {
+        if (contributions[msg.sender] == 0) revert NotContributor();
+        if (proposalId >= proposals.length) revert InvalidProposalId();
+        Proposal storage p = proposals[proposalId];
+        if (p.executed) revert ProposalAlreadyExecuted();
+        if (proposalVoted[proposalId][msg.sender]) revert AlreadyVoted();
+        proposalVoted[proposalId][msg.sender] = true;
+        p.voteCount += 1;
+        emit ProposalVoted(proposalId, msg.sender);
+    }
+
+    /// @notice Mark a proposal as executed once the off-chain decision has been applied.
+    /// Only creator or admin may execute; requires at least one vote.
+    function executeProposal(uint256 proposalId) external {
+        if (msg.sender != creator && msg.sender != admin) revert NotAdmin();
+        if (proposalId >= proposals.length) revert InvalidProposalId();
+        Proposal storage p = proposals[proposalId];
+        if (p.executed) revert ProposalAlreadyExecuted();
+        if (p.voteCount == 0) revert ProposalAlreadyExecuted(); // re-use error for simplicity
+        p.executed = true;
+        emit ProposalExecuted(proposalId);
     }
 
     receive() external payable {

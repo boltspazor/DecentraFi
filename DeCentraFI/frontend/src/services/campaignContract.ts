@@ -230,3 +230,28 @@ export function useRefund(campaignAddress: `0x${string}` | null) {
     reset,
   };
 }
+
+export function useVoteProposal(campaignAddress: `0x${string}` | null) {
+  const { writeContract, data: hash, isPending, error, reset } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+
+  function voteProposal(proposalId: bigint) {
+    if (!campaignAddress) throw new Error("Campaign address required");
+    writeContract({
+      address: campaignAddress,
+      abi: campaignAbi,
+      functionName: "voteProposal",
+      args: [proposalId],
+      chainId: sepolia.id,
+    });
+  }
+
+  return {
+    voteProposal,
+    hash,
+    isPending: isPending || isConfirming,
+    isSuccess,
+    error,
+    reset,
+  };
+}

@@ -368,6 +368,49 @@ describe("Campaign", function () {
     );
   });
 
+  describe("Governance: proposals", function () {
+    it("allows creator to create a proposal", async function () {
+      await expect(campaign.connect(owner).createProposal("Update campaign details"))
+        .to.emit(campaign, "ProposalCreated")
+        .withArgs(0, "Update campaign details");
+      const p = await campaign.proposals(0);
+      expect(p.description).to.equal("Update campaign details");
+      expect(p.voteCount).to.equal(0);
+      expect(p.executed).to.equal(false);
+    });
+
+    it("allows contributor to vote once on proposal and prevents double vote", async function () {
+      await campaign.connect(contributor1).contribute({ value: ethers.parseEther("1") });
+      await campaign.connect(owner).createProposal("Approve milestone plan");
+      await expect(campaign.connect(contributor1).voteProposal(0))
+        .to.emit(campaign, "ProposalVoted")
+        .withArgs(0, contributor1.address);
+      const p = await campaign.proposals(0);
+      expect(p.voteCount).to.equal(1);
+      await expect(
+        campaign.connect(contributor1).voteProposal(0)
+      ).to.be.revertedWithCustomError(campaign, "AlreadyVoted");
+    });
+
+    it("reverts vote from non-contributor", async function () {
+      await campaign.connect(owner).createProposal("Test");
+      await expect(
+        campaign.connect(contributor1).voteProposal(0)
+      ).to.be.revertedWithCustomError(campaign, "NotContributor");
+    });
+
+    it("allows creator or admin to execute proposal after votes", async function () {
+      await campaign.connect(contributor1).contribute({ value: ethers.parseEther("1") });
+      await campaign.connect(owner).createProposal("Allow early withdrawal");
+      await campaign.connect(contributor1).voteProposal(0);
+      await expect(campaign.connect(owner).executeProposal(0))
+        .to.emit(campaign, "ProposalExecuted")
+        .withArgs(0);
+      const p = await campaign.proposals(0);
+      expect(p.executed).to.equal(true);
+    });
+  });
+
   describe("Fraud detection: report and verify", function () {
     it("should allow users to report campaign", async function () {
       await campaign.connect(contributor1).reportCampaign();

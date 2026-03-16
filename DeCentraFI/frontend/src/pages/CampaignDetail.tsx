@@ -8,6 +8,7 @@ import {
   useWithdraw,
   useFinalize,
   useRefund,
+  useVoteProposal,
 } from "../services/campaignContract";
 import * as api from "../services/api";
 import { useQuery } from "@tanstack/react-query";
@@ -56,6 +57,9 @@ export function CampaignDetail() {
   const [reportError, setReportError] = useState<string | null>(null);
   const [reportSuccess, setReportSuccess] = useState(false);
   const processedTxRef = useRef<string | null>(null);
+  const [proposals, setProposals] = useState<
+    { id: number; description: string; voteCount: bigint; executed: boolean }[]
+  >([]);
 
   const campaignAddress = campaignMeta?.campaignAddress
     ? (campaignMeta.campaignAddress as `0x${string}`)
@@ -74,6 +78,7 @@ export function CampaignDetail() {
     creator,
     myContribution,
     refetch: refetchChain,
+    contract,
   } = useCampaign(campaignAddress);
 
   const {
@@ -124,6 +129,14 @@ export function CampaignDetail() {
     refundEnabled &&
     myContribution > 0n;
   const canFinalize = isExpired && !finalized && !closed && !refundEnabled;
+
+  const {
+    voteProposal,
+    isPending: isVotePending,
+    isSuccess: isVoteSuccess,
+    error: voteError,
+    reset: resetVote,
+  } = useVoteProposal(campaignAddress);
 
   const {
     data: analytics,
@@ -310,6 +323,36 @@ export function CampaignDetail() {
       contributionCount: p.contributionCount,
     })) ?? [];
 
+  useEffect(() => {
+    if (!contract) return;
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const count = Number(await contract.read.getProposalCount());
+        const items: { id: number; description: string; voteCount: bigint; executed: boolean }[] =
+          [];
+        for (let i = 0; i < count; i += 1) {
+          const [description, voteCount, executed] = await contract.read.proposals([
+            BigInt(i),
+          ]);
+          items.push({
+            id: i,
+            description,
+            voteCount,
+            executed,
+          });
+        }
+        if (!cancelled) setProposals(items);
+      } catch {
+        if (!cancelled) setProposals([]);
+      }
+    };
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [contract, isVoteSuccess, campaignMeta?.id]);
+
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
       <Link to="/" className="text-indigo-600 hover:underline mb-6 inline-block">
@@ -441,6 +484,60 @@ export function CampaignDetail() {
               </div>
             )}
           </>
+        )}
+      </div>
+
+      <div className="mb-6 p-4 bg-white rounded-lg border border-gray-200">
+        <h2 className="text-lg font-semibold mb-2">Governance</h2>
+        <p className="text-sm text-gray-600 mb-3">
+          Contributors can vote on proposals about milestones, withdrawals, and campaign updates.
+        </p>
+        {proposals.length === 0 ? (
+          <p className="text-sm text-gray-500">No active proposals.</p>
+        ) : (
+          <ul className="space-y-2">
+            {proposals.map((p) => (
+              <li
+                key={p.id}
+                className="flex items-center justify-between text-sm bg-gray-50 border border-gray-200 rounded px-3 py-2"
+              >
+                <div className="mr-3">
+                  <p className="font-medium text-gray-900">{p.description}</p>
+                  <p className="text-xs text-gray-500">
+                    Votes: {p.voteCount.toString()}{" "}
+                    {p.executed && (
+                      <span className="ml-1 inline-block px-1.5 py-0.5 rounded bg-green-100 text-green-700">
+                        Executed
+                      </span>
+                    )}
+                  </p>
+                </div>
+                {!p.executed && (
+                  <button
+                    type="button"
+                    disabled={
+                      isVotePending ||
+                      !isConnected ||
+                      !address ||
+                      myContribution <= 0n
+                    }
+                    onClick={() => {
+                      resetVote();
+                      voteProposal(BigInt(p.id));
+                    }}
+                    className="px-3 py-1 rounded bg-indigo-600 text-white text-xs hover:bg-indigo-700 disabled:opacity-50"
+                  >
+                    {isVotePending ? "Voting…" : "Vote"}
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+        {voteError && (
+          <p className="mt-2 text-xs text-red-600">
+            {voteError instanceof Error ? voteError.message : String(voteError)}
+          </p>
         )}
       </div>
 
