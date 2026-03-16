@@ -155,6 +155,30 @@ describe("CampaignDetail", () => {
     expect(screen.getByText(/unique contributors/i)).toBeInTheDocument();
     expect(screen.getByText(/average donation/i)).toBeInTheDocument();
     expect(screen.getByText(/goal completion/i)).toBeInTheDocument();
+    expect(screen.getByText(/funding progress over time/i)).toBeInTheDocument();
+    expect(screen.getByText(/contribution distribution/i)).toBeInTheDocument();
+  });
+
+  it("shows analytics loading state while analytics are fetching", async () => {
+    vi.mocked(api.getCampaignAnalytics).mockImplementation(
+      () => new Promise(() => {}) as never
+    );
+    renderCampaignDetail();
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: /test campaign/i })).toBeInTheDocument();
+    });
+    expect(screen.getByText(/loading analytics/i)).toBeInTheDocument();
+  });
+
+  it("shows analytics error state when analytics API fails", async () => {
+    vi.mocked(api.getCampaignAnalytics).mockRejectedValue(new Error("Analytics failed"));
+    renderCampaignDetail();
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: /test campaign/i })).toBeInTheDocument();
+    });
+    await waitFor(() => {
+      expect(screen.getByText(/failed to load analytics/i)).toBeInTheDocument();
+    });
   });
 
   it("displays creator trust score correctly when present", async () => {
