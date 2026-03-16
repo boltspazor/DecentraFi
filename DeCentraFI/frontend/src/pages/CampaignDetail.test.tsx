@@ -51,6 +51,7 @@ vi.mock("../services/campaignContract", () => ({
     creator: "0xcreator0000000000000000000000000000000001",
     myContribution: 0n,
     refetch: vi.fn(),
+    contract: null,
   })),
   useContribute: vi.fn(() => ({
     contribute: vi.fn(),
@@ -79,6 +80,14 @@ vi.mock("../services/campaignContract", () => ({
     claimRefund: vi.fn(),
     isPending: false,
     isSuccess: false,
+    error: null,
+    reset: vi.fn(),
+  })),
+  useVoteProposal: vi.fn(() => ({
+    voteProposal: vi.fn(),
+    isPending: false,
+    isSuccess: false,
+    hash: undefined,
     error: null,
     reset: vi.fn(),
   })),
@@ -454,6 +463,114 @@ describe("CampaignDetail", () => {
     expect(screen.getByText(/0% funded/)).toBeInTheDocument();
     expect(screen.getByLabelText(/amount \(eth\)/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /contribute/i })).toBeInTheDocument();
+  });
+
+  describe("Governance UI", () => {
+    it("renders proposals and vote button when proposals exist", async () => {
+      const { useCampaign, useVoteProposal } = await import("../services/campaignContract");
+      const mockVoteProposal = vi.fn();
+      vi.mocked(useCampaign).mockReturnValue({
+        goal: BigInt("10000000000000000000"),
+        deadline: BigInt(Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60),
+        totalContributed: 0n,
+        totalRaised: 0n,
+        closed: false,
+        fundsWithdrawn: false,
+        fundsReleased: false,
+        refundEnabled: false,
+        finalized: false,
+        creator: "0xcreator0000000000000000000000000000000001",
+        myContribution: BigInt("1000000000000000000"),
+        refetch: vi.fn(),
+        contract: {
+          read: {
+            getProposalCount: vi.fn().mockResolvedValue(1n),
+            proposals: vi.fn().mockResolvedValue(["Test proposal", 2n, false]),
+          },
+        },
+      } as never);
+      vi.mocked(useVoteProposal).mockReturnValue({
+        voteProposal: mockVoteProposal,
+        isPending: false,
+        isSuccess: false,
+        hash: undefined,
+        error: null,
+        reset: vi.fn(),
+      } as never);
+
+      renderCampaignDetail();
+      await waitFor(() => {
+        expect(screen.getByText(/governance/i)).toBeInTheDocument();
+      });
+      expect(screen.getByText(/test proposal/i)).toBeInTheDocument();
+      expect(screen.getByText(/votes: 2/i)).toBeInTheDocument();
+      const voteButton = screen.getByRole("button", { name: /vote/i });
+      expect(voteButton).toBeInTheDocument();
+      fireEvent.click(voteButton);
+      expect(mockVoteProposal).toHaveBeenCalledWith(0n);
+    });
+
+    it("disables vote button for non-contributor", async () => {
+      const { useCampaign } = await import("../services/campaignContract");
+      vi.mocked(useCampaign).mockReturnValue({
+        goal: BigInt("10000000000000000000"),
+        deadline: BigInt(Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60),
+        totalContributed: 0n,
+        totalRaised: 0n,
+        closed: false,
+        fundsWithdrawn: false,
+        fundsReleased: false,
+        refundEnabled: false,
+        finalized: false,
+        creator: "0xcreator0000000000000000000000000000000001",
+        myContribution: 0n,
+        refetch: vi.fn(),
+        contract: {
+          read: {
+            getProposalCount: vi.fn().mockResolvedValue(1n),
+            proposals: vi.fn().mockResolvedValue(["Test proposal", 0n, false]),
+          },
+        },
+      } as never);
+
+      renderCampaignDetail();
+      await waitFor(() => {
+        expect(screen.getByText(/governance/i)).toBeInTheDocument();
+      });
+      const voteButton = screen.getByRole("button", { name: /vote/i });
+      expect(voteButton).toBeDisabled();
+    });
+
+    it("shows executed status and hides vote button for executed proposal", async () => {
+      const { useCampaign } = await import("../services/campaignContract");
+      vi.mocked(useCampaign).mockReturnValue({
+        goal: BigInt("10000000000000000000"),
+        deadline: BigInt(Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60),
+        totalContributed: 0n,
+        totalRaised: 0n,
+        closed: false,
+        fundsWithdrawn: false,
+        fundsReleased: false,
+        refundEnabled: false,
+        finalized: false,
+        creator: "0xcreator0000000000000000000000000000000001",
+        myContribution: BigInt("1000000000000000000"),
+        refetch: vi.fn(),
+        contract: {
+          read: {
+            getProposalCount: vi.fn().mockResolvedValue(1n),
+            proposals: vi.fn().mockResolvedValue(["Executed proposal", 3n, true]),
+          },
+        },
+      } as never);
+
+      renderCampaignDetail();
+      await waitFor(() => {
+        expect(screen.getByText(/executed proposal/i)).toBeInTheDocument();
+      });
+      expect(screen.getByText(/executed/i)).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /vote/i })).not.toBeInTheDocument();
+    });
   });
 
   describe("Fraud detection UI", () => {

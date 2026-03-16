@@ -409,6 +409,16 @@ describe("Campaign", function () {
       const p = await campaign.proposals(0);
       expect(p.executed).to.equal(true);
     });
+
+    it("reverts when executing already executed proposal", async function () {
+      await campaign.connect(contributor1).contribute({ value: ethers.parseEther("1") });
+      await campaign.connect(owner).createProposal("Test execution");
+      await campaign.connect(contributor1).voteProposal(0);
+      await campaign.connect(owner).executeProposal(0);
+      await expect(
+        campaign.connect(owner).executeProposal(0)
+      ).to.be.revertedWithCustomError(campaign, "ProposalAlreadyExecuted");
+    });
   });
 
   describe("Fraud detection: report and verify", function () {
