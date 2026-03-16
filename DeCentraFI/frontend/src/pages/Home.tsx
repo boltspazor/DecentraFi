@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
-import { getCampaigns, type CampaignMeta } from "../services/api";
+import { useAccount } from "wagmi";
+import { getCampaigns, getRecommendations, type CampaignMeta } from "../services/api";
 
 function CampaignCard({ c }: { c: CampaignMeta }) {
   const goalNum = Number(c.goal);
@@ -24,6 +25,9 @@ function CampaignCard({ c }: { c: CampaignMeta }) {
           />
         </div>
         <div className="mt-3 flex flex-wrap gap-3 text-xs text-gray-500">
+          {c.category && (
+            <span className="px-1.5 py-0.5 rounded bg-gray-100 text-gray-700">{c.category}</span>
+          )}
           <span>Goal: {goalEth} ETH</span>
           <span>Raised: {raisedEth} ETH</span>
           <span>Creator: {creator}</span>
@@ -46,12 +50,19 @@ function CampaignCard({ c }: { c: CampaignMeta }) {
 }
 
 export function Home() {
+  const { address } = useAccount();
   const { data: campaigns, isLoading, isFetching, error, refetch } = useQuery({
     queryKey: ["campaigns"],
     queryFn: getCampaigns,
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
     refetchOnWindowFocus: true,
+  });
+  const { data: recommended = [], isLoading: recommendationsLoading } = useQuery({
+    queryKey: ["recommendations", address],
+    queryFn: () => getRecommendations(address!, 12),
+    enabled: !!address,
+    retry: 1,
   });
 
   useEffect(() => {
@@ -61,6 +72,7 @@ export function Home() {
   }, [refetch]);
 
   const list = Array.isArray(campaigns) ? campaigns : [];
+  const recommendedList = Array.isArray(recommended) ? recommended : [];
   const errorMessage = error instanceof Error ? error.message : "Failed to load campaigns";
 
   return (
@@ -69,6 +81,29 @@ export function Home() {
       <p className="text-gray-600 mb-8">
         Decentralized crowdfunding on Sepolia. Connect your wallet and create or fund campaigns.
       </p>
+
+      {address && (
+        <section className="mb-10">
+          <h2 className="text-lg font-semibold text-gray-800 mb-4">Recommended Campaigns</h2>
+          <p className="text-sm text-gray-500 mb-4">
+            Based on your contributions and similar campaigns.
+          </p>
+          {recommendationsLoading && <p className="text-gray-500">Loading recommendations…</p>}
+          {!recommendationsLoading && recommendedList.length === 0 && (
+            <p className="text-gray-500">No recommendations yet. Explore campaigns or contribute to get personalized picks.</p>
+          )}
+          {!recommendationsLoading && recommendedList.length > 0 && (
+            <ul className="grid gap-4 sm:grid-cols-2">
+              {recommendedList.map((c) => (
+                <li key={c.id}>
+                  <CampaignCard c={c} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
+
       <section>
         <h2 className="text-lg font-semibold text-gray-800 mb-4">Campaigns</h2>
         {isLoading && <p className="text-gray-500">Loading campaigns…</p>}

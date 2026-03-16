@@ -12,6 +12,7 @@ export interface CampaignRow {
   total_raised?: string;
   status?: string;
   is_verified?: boolean;
+  category?: string | null;
   created_at: Date;
 }
 

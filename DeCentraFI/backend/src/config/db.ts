@@ -85,6 +85,7 @@ export async function connectDb(): Promise<void> {
       `ALTER TABLE campaigns ADD COLUMN total_raised VARCHAR(78) DEFAULT '0'`,
       `ALTER TABLE campaigns ADD COLUMN status VARCHAR(20) DEFAULT 'Active'`,
       `ALTER TABLE campaigns ADD COLUMN is_verified BOOLEAN DEFAULT FALSE`,
+      `ALTER TABLE campaigns ADD COLUMN category VARCHAR(64)`,
     ];
     for (const q of alterQueries) {
       try {

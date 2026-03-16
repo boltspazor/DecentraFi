@@ -24,6 +24,7 @@ export interface CampaignMeta {
   totalRaised?: string;
   status?: string;
   isVerified?: boolean;
+  category?: string | null;
   createdAt: string;
 }
 
@@ -125,6 +126,23 @@ export async function createCampaign(data: {
     throw new ApiError(message, res.status, text);
   }
   return res.json() as Promise<CampaignMeta>;
+}
+
+export async function getRecommendations(walletAddress: string, limit = 12): Promise<CampaignMeta[]> {
+  const res = await fetch(`${API_BASE}/api/recommendations/${encodeURIComponent(walletAddress)}?limit=${limit}`);
+  if (!res.ok) {
+    if (res.status === 400) return [];
+    const text = await res.text();
+    let message = text;
+    try {
+      const json = JSON.parse(text) as { error?: string };
+      if (json.error) message = json.error;
+    } catch {
+      //
+    }
+    throw new ApiError(message, res.status);
+  }
+  return res.json();
 }
 
 export async function getCampaigns(): Promise<CampaignMeta[]> {
