@@ -62,6 +62,7 @@ describe("Contributions & campaign detail (integration)", () => {
         contributorAddress: validAddress,
         amountWei: "1000000000000000000",
         txHash: validTxHash1,
+        chainId: 1,
       });
     expect(res.status).toBe(201);
     expect(res.body).toMatchObject({
@@ -69,6 +70,7 @@ describe("Contributions & campaign detail (integration)", () => {
       contributorAddress: validAddress.toLowerCase(),
       amountWei: "1000000000000000000",
       txHash: validTxHash1,
+      chainId: 1,
     });
     expect(res.body).toHaveProperty("id");
     expect(res.body).toHaveProperty("createdAt");
@@ -88,13 +90,16 @@ describe("Contributions & campaign detail (integration)", () => {
     expect(res.body.error).toMatch(/transaction hash|already/i);
   });
 
-  it("should return campaign detail from GET /api/campaigns/:id including creatorTrustScore", async () => {
+  it("should return campaign detail from GET /api/campaigns/:id including creatorTrustScore and multi-chain fields", async () => {
     if (!campaignId) return;
     const res = await request(app).get(`/api/campaigns/${campaignId}`);
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty("id", campaignId);
     expect(res.body).toHaveProperty("title");
     expect(res.body).toHaveProperty("totalRaised");
+    expect(res.body).toHaveProperty("totalRaisedAllChains");
+    expect(res.body).toHaveProperty("addressesByChain");
+    expect(Array.isArray(res.body.addressesByChain)).toBe(true);
     expect(res.body).toHaveProperty("status");
     expect(res.body).toHaveProperty("creatorTrustScore");
     expect(typeof res.body.creatorTrustScore).toBe("number");
@@ -102,7 +107,7 @@ describe("Contributions & campaign detail (integration)", () => {
     expect(res.body.creatorTrustScore).toBeLessThanOrEqual(10);
   });
 
-  it("should return contributions list from GET /api/contributions/campaign/:id", async () => {
+  it("should return contributions list from GET /api/contributions/campaign/:id with chainId", async () => {
     if (!campaignId) return;
     const res = await request(app).get(`/api/contributions/campaign/${campaignId}`);
     expect(res.status).toBe(200);
@@ -110,6 +115,7 @@ describe("Contributions & campaign detail (integration)", () => {
     expect(res.body.length).toBeGreaterThanOrEqual(1);
     expect(res.body[0]).toHaveProperty("amountWei");
     expect(res.body[0]).toHaveProperty("txHash");
+    expect(res.body[0]).toHaveProperty("chainId");
   });
 
   it("should update campaign status via PATCH /api/campaigns/:id/status", async () => {

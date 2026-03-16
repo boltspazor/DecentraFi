@@ -48,7 +48,9 @@ export async function create(data: {
   if (!result.rows[0]) {
     throw new Error("Insert failed");
   }
-  return result.rows[0] as CampaignRow;
+  const row = result.rows[0] as CampaignRow;
+  await registerCampaignChainAddress(row.id, 1, normalizedAddress);
+  return row;
 }
 
 export async function findAll(): Promise<CampaignRow[]> {
@@ -86,6 +88,45 @@ export async function updateTotalRaisedAndStatus(
 
 export async function updateVerified(campaignId: number, isVerified: boolean): Promise<void> {
   await pool.query("UPDATE campaigns SET is_verified = $1 WHERE id = $2", [isVerified, campaignId]);
+}
+
+export interface CampaignChainAddressRow {
+  campaign_id: number;
+  chain_id: number;
+  campaign_address: string;
+}
+
+export async function getAddressesByChain(campaignId: number): Promise<{ chainId: number; campaignAddress: string }[]> {
+  const result = await pool.query(
+    "SELECT chain_id, campaign_address FROM campaign_chain_addresses WHERE campaign_id = $1 ORDER BY chain_id",
+    [campaignId]
+  );
+  return (result.rows as CampaignChainAddressRow[]).map((r) => ({
+    chainId: r.chain_id,
+    campaignAddress: r.campaign_address,
+  }));
+}
+
+export async function getTotalRaisedAllChains(campaignId: number): Promise<string> {
+  const result = await pool.query(
+    "SELECT COALESCE(SUM(amount_wei::numeric), 0)::text AS total FROM contributions WHERE campaign_id = $1",
+    [campaignId]
+  );
+  const total = result.rows[0]?.total ?? "0";
+  return String(BigInt(total));
+}
+
+export async function registerCampaignChainAddress(
+  campaignId: number,
+  chainId: number,
+  campaignAddress: string
+): Promise<void> {
+  await pool.query(
+    `INSERT INTO campaign_chain_addresses (campaign_id, chain_id, campaign_address)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (campaign_id, chain_id) DO UPDATE SET campaign_address = $3`,
+    [campaignId, chainId, campaignAddress.toLowerCase()]
+  );
 }
 
 export interface SearchCampaignsOptions {

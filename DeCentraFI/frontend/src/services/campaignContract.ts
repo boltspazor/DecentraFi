@@ -10,9 +10,11 @@ import {
 import { sepolia } from "wagmi/chains";
 import { campaignAbi } from "../abis/campaign";
 
-function useCampaignContract(campaignAddress: `0x${string}` | null) {
-  const publicClient = usePublicClient({ chainId: sepolia.id });
-  const { data: walletClient } = useWalletClient({ chainId: sepolia.id });
+const DEFAULT_CHAIN_ID = sepolia.id;
+
+function useCampaignContract(campaignAddress: `0x${string}` | null, chainId: number = DEFAULT_CHAIN_ID) {
+  const publicClient = usePublicClient({ chainId });
+  const { data: walletClient } = useWalletClient({ chainId });
 
   const contract =
     campaignAddress && publicClient
@@ -26,74 +28,74 @@ function useCampaignContract(campaignAddress: `0x${string}` | null) {
   return contract;
 }
 
-export function useCampaign(campaignAddress: `0x${string}` | null) {
+export function useCampaign(campaignAddress: `0x${string}` | null, chainId: number = DEFAULT_CHAIN_ID) {
   const { address } = useAccount();
   const { data: goal } = useReadContract({
     address: campaignAddress ?? undefined,
     abi: campaignAbi,
     functionName: "goal",
-    chainId: sepolia.id,
+    chainId,
   });
   const { data: deadline } = useReadContract({
     address: campaignAddress ?? undefined,
     abi: campaignAbi,
     functionName: "deadline",
-    chainId: sepolia.id,
+    chainId,
   });
   const { data: totalContributed, refetch: refetchTotal } = useReadContract({
     address: campaignAddress ?? undefined,
     abi: campaignAbi,
     functionName: "totalContributed",
-    chainId: sepolia.id,
+    chainId,
   });
   const { data: totalRaised } = useReadContract({
     address: campaignAddress ?? undefined,
     abi: campaignAbi,
     functionName: "totalRaised",
-    chainId: sepolia.id,
+    chainId,
   });
   const { data: closed } = useReadContract({
     address: campaignAddress ?? undefined,
     abi: campaignAbi,
     functionName: "closed",
-    chainId: sepolia.id,
+    chainId,
   });
   const { data: fundsWithdrawn } = useReadContract({
     address: campaignAddress ?? undefined,
     abi: campaignAbi,
     functionName: "fundsWithdrawn",
-    chainId: sepolia.id,
+    chainId,
   });
   const { data: fundsReleased } = useReadContract({
     address: campaignAddress ?? undefined,
     abi: campaignAbi,
     functionName: "fundsReleased",
-    chainId: sepolia.id,
+    chainId,
   });
   const { data: refundEnabled } = useReadContract({
     address: campaignAddress ?? undefined,
     abi: campaignAbi,
     functionName: "refundEnabled",
-    chainId: sepolia.id,
+    chainId,
   });
   const { data: finalized } = useReadContract({
     address: campaignAddress ?? undefined,
     abi: campaignAbi,
     functionName: "finalized",
-    chainId: sepolia.id,
+    chainId,
   });
   const { data: creator } = useReadContract({
     address: campaignAddress ?? undefined,
     abi: campaignAbi,
     functionName: "creator",
-    chainId: sepolia.id,
+    chainId,
   });
   const { data: myContribution, refetch: refetchMyContribution } = useReadContract({
     address: campaignAddress ?? undefined,
     abi: campaignAbi,
     functionName: "contributions",
     args: address ? [address] : undefined,
-    chainId: sepolia.id,
+    chainId,
   });
 
   const refetch = () => {
@@ -114,11 +116,11 @@ export function useCampaign(campaignAddress: `0x${string}` | null) {
     creator: creator ?? "0x0",
     myContribution: myContribution ?? 0n,
     refetch,
-    contract: useCampaignContract(campaignAddress),
+    contract: useCampaignContract(campaignAddress, chainId),
   };
 }
 
-export function useContribute(campaignAddress: `0x${string}` | null) {
+export function useContribute(campaignAddress: `0x${string}` | null, chainId: number = DEFAULT_CHAIN_ID) {
   const { address } = useAccount();
   const {
     writeContract,
@@ -127,7 +129,7 @@ export function useContribute(campaignAddress: `0x${string}` | null) {
     error,
     reset,
   } = useWriteContract();
-  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash, chainId });
 
   function contribute(valueWei: bigint) {
     if (!campaignAddress) throw new Error("Campaign address required");
@@ -137,7 +139,7 @@ export function useContribute(campaignAddress: `0x${string}` | null) {
       abi: campaignAbi,
       functionName: "contribute",
       value: valueWei,
-      chainId: sepolia.id,
+      chainId,
     });
   }
 
@@ -152,7 +154,7 @@ export function useContribute(campaignAddress: `0x${string}` | null) {
   };
 }
 
-export function useWithdraw(campaignAddress: `0x${string}` | null) {
+export function useWithdraw(campaignAddress: `0x${string}` | null, chainId: number = DEFAULT_CHAIN_ID) {
   const {
     writeContract,
     data: hash,
@@ -160,7 +162,7 @@ export function useWithdraw(campaignAddress: `0x${string}` | null) {
     error,
     reset,
   } = useWriteContract();
-  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash, chainId });
 
   function releaseFunds() {
     if (!campaignAddress) throw new Error("Campaign address required");
@@ -168,7 +170,7 @@ export function useWithdraw(campaignAddress: `0x${string}` | null) {
       address: campaignAddress,
       abi: campaignAbi,
       functionName: "releaseFunds",
-      chainId: sepolia.id,
+      chainId,
     });
   }
 
@@ -183,9 +185,9 @@ export function useWithdraw(campaignAddress: `0x${string}` | null) {
   };
 }
 
-export function useFinalize(campaignAddress: `0x${string}` | null) {
+export function useFinalize(campaignAddress: `0x${string}` | null, chainId: number = DEFAULT_CHAIN_ID) {
   const { writeContract, data: hash, isPending, error, reset } = useWriteContract();
-  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash, chainId });
 
   function finalizeAfterDeadline() {
     if (!campaignAddress) throw new Error("Campaign address required");
@@ -193,7 +195,7 @@ export function useFinalize(campaignAddress: `0x${string}` | null) {
       address: campaignAddress,
       abi: campaignAbi,
       functionName: "finalizeAfterDeadline",
-      chainId: sepolia.id,
+      chainId,
     });
   }
 
@@ -207,9 +209,9 @@ export function useFinalize(campaignAddress: `0x${string}` | null) {
   };
 }
 
-export function useRefund(campaignAddress: `0x${string}` | null) {
+export function useRefund(campaignAddress: `0x${string}` | null, chainId: number = DEFAULT_CHAIN_ID) {
   const { writeContract, data: hash, isPending, error, reset } = useWriteContract();
-  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash, chainId });
 
   function claimRefund() {
     if (!campaignAddress) throw new Error("Campaign address required");
@@ -217,7 +219,7 @@ export function useRefund(campaignAddress: `0x${string}` | null) {
       address: campaignAddress,
       abi: campaignAbi,
       functionName: "claimRefund",
-      chainId: sepolia.id,
+      chainId,
     });
   }
 
@@ -231,9 +233,9 @@ export function useRefund(campaignAddress: `0x${string}` | null) {
   };
 }
 
-export function useVoteProposal(campaignAddress: `0x${string}` | null) {
+export function useVoteProposal(campaignAddress: `0x${string}` | null, chainId: number = DEFAULT_CHAIN_ID) {
   const { writeContract, data: hash, isPending, error, reset } = useWriteContract();
-  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash, chainId });
 
   function voteProposal(proposalId: bigint) {
     if (!campaignAddress) throw new Error("Campaign address required");
@@ -242,7 +244,7 @@ export function useVoteProposal(campaignAddress: `0x${string}` | null) {
       abi: campaignAbi,
       functionName: "voteProposal",
       args: [proposalId],
-      chainId: sepolia.id,
+      chainId,
     });
   }
 

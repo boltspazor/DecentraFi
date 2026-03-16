@@ -1,7 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useAccount, useSwitchChain } from "wagmi";
-import { sepolia } from "wagmi/chains";
 import {
   useCampaign,
   useContribute,
@@ -24,8 +23,18 @@ import {
   Bar,
 } from "recharts";
 import { getTransactionErrorMessage } from "../utils/errorMessages";
+import { getBlockExplorerTxUrl } from "../utils/blockExplorer";
+import { SUPPORTED_CHAIN_IDS } from "../config/wagmiConfig";
 
-const SEPOLIA_ETHERSCAN_TX = "https://sepolia.etherscan.io/tx/";
+function getChainName(chainId: number): string {
+  switch (chainId) {
+    case 1: return "Ethereum";
+    case 137: return "Polygon";
+    case 42161: return "Arbitrum";
+    case 11155111: return "Sepolia";
+    default: return `Chain ${chainId}`;
+  }
+}
 
 function formatCountdown(deadlineSeconds: number): string {
   const now = Math.floor(Date.now() / 1000);
@@ -61,9 +70,27 @@ export function CampaignDetail() {
     { id: number; description: string; voteCount: bigint; executed: boolean }[]
   >([]);
 
-  const campaignAddress = campaignMeta?.campaignAddress
-    ? (campaignMeta.campaignAddress as `0x${string}`)
-    : null;
+  const currentChainId = chainId ?? null;
+  const addressesByChain = campaignMeta?.addressesByChain ?? [];
+  const campaignAddressForChain = useMemo(() => {
+    if (!campaignMeta) return null;
+    const addr =
+      currentChainId != null
+        ? addressesByChain.find((a) => a.chainId === currentChainId)?.campaignAddress
+        : undefined;
+    const raw = (addr ?? campaignMeta.campaignAddress) as string;
+    return raw ? (raw as `0x${string}`) : null;
+  }, [campaignMeta, currentChainId, addressesByChain]);
+
+  const campaignAddress = campaignAddressForChain;
+
+  const isSupportedChain = (id: number) => (SUPPORTED_CHAIN_IDS as number[]).includes(id);
+  const campaignNotOnThisChain =
+    currentChainId != null && isSupportedChain(currentChainId) && !campaignAddressForChain;
+  const isWrongNetwork =
+    isConnected &&
+    (currentChainId == null || !isSupportedChain(currentChainId) || !campaignAddressForChain);
+  const chainIdForHooks = (currentChainId ?? 11155111) as 1 | 137 | 42161 | 11155111;
 
   const {
     goal,
@@ -79,7 +106,7 @@ export function CampaignDetail() {
     myContribution,
     refetch: refetchChain,
     contract,
-  } = useCampaign(campaignAddress);
+  } = useCampaign(campaignAddress, chainIdForHooks);
 
   const {
     contribute: contributeOnChain,
@@ -89,7 +116,7 @@ export function CampaignDetail() {
     error: contributeTxError,
     reset: resetContribute,
     contributorAddress,
-  } = useContribute(campaignAddress);
+  } = useContribute(campaignAddress, chainIdForHooks);
 
   const {
     releaseFunds,
@@ -97,14 +124,14 @@ export function CampaignDetail() {
     isSuccess: isWithdrawSuccess,
     error: withdrawError,
     reset: resetWithdraw,
-  } = useWithdraw(campaignAddress);
+  } = useWithdraw(campaignAddress, chainIdForHooks);
 
   const {
     finalizeAfterDeadline,
     isPending: isFinalizePending,
     isSuccess: isFinalizeSuccess,
     reset: resetFinalize,
-  } = useFinalize(campaignAddress);
+  } = useFinalize(campaignAddress, chainIdForHooks);
 
   const {
     claimRefund,
@@ -112,9 +139,7 @@ export function CampaignDetail() {
     isSuccess: isRefundSuccess,
     error: refundError,
     reset: resetRefund,
-  } = useRefund(campaignAddress);
-
-  const isWrongNetwork = isConnected && chainId !== undefined && chainId !== sepolia.id;
+  } = useRefund(campaignAddress, chainIdForHooks);
   const isCreator = address && creator && address.toLowerCase() === creator.toLowerCase();
   const deadlineNum = Number(deadline);
   const isExpired = deadlineNum > 0 && Math.floor(Date.now() / 1000) >= deadlineNum;
@@ -136,7 +161,7 @@ export function CampaignDetail() {
     isSuccess: isVoteSuccess,
     error: voteError,
     reset: resetVote,
-  } = useVoteProposal(campaignAddress);
+  } = useVoteProposal(campaignAddress, chainIdForHooks);
 
   const {
     data: analytics,
@@ -185,12 +210,14 @@ export function CampaignDetail() {
       ? String(BigInt(Math.floor(parseFloat(contributeAmountEth) * 1e18)))
       : "0";
     resetContribute();
+    const chainIdForTx = currentChainId ?? 11155111;
     api
       .postContribution({
         campaignId: campaignMeta.id,
         contributorAddress,
         amountWei,
         txHash,
+        chainId: chainIdForTx,
       })
       .then(() => {
         setContributeSuccessTx(txHash);
@@ -206,7 +233,7 @@ export function CampaignDetail() {
         processedTxRef.current = null;
         setContributeError(e instanceof Error ? e.message : "Failed to record contribution");
       });
-  }, [isContributeSuccess, contributeTxHash, campaignMeta, contributorAddress, contributeAmountEth, refetchChain, resetContribute]);
+  }, [isContributeSuccess, contributeTxHash, campaignMeta, contributorAddress, contributeAmountEth, currentChainId, refetchChain, resetContribute]);
 
   useEffect(() => {
     if (isWithdrawSuccess) {
@@ -239,7 +266,11 @@ export function CampaignDetail() {
       return;
     }
     if (isWrongNetwork) {
-      setContributeError("Switch to Sepolia network");
+      setContributeError(
+        campaignNotOnThisChain
+          ? "This campaign is not deployed on the current network. Switch to a supported chain where this campaign accepts contributions."
+          : "Switch to a supported network (Ethereum, Polygon, Arbitrum, or Sepolia)"
+      );
       return;
     }
     const num = parseFloat(contributeAmountEth);
@@ -314,6 +345,8 @@ export function CampaignDetail() {
 
   const goalEth = (Number(campaignMeta.goal) / 1e18).toFixed(4);
   const raisedEth = (Number(raisedForProgress) / 1e18).toFixed(4);
+  const totalRaisedAllChainsWei = campaignMeta.totalRaisedAllChains ?? campaignMeta.totalRaised ?? "0";
+  const totalRaisedAllChainsEth = (Number(totalRaisedAllChainsWei) / 1e18).toFixed(4);
   const contributorCount = contributions.length;
 
   const analyticsTimeseries =
@@ -377,8 +410,13 @@ export function CampaignDetail() {
       <div className="mb-6 p-4 bg-gray-50 rounded-lg">
         <div className="flex justify-between text-sm mb-2">
           <span>Goal: {goalEth} ETH</span>
-          <span>Raised: {raisedEth} ETH (on-chain)</span>
+          <span>Raised: {raisedEth} ETH (this chain)</span>
         </div>
+        {totalRaisedAllChainsWei !== "0" && (
+          <p className="text-sm font-medium text-indigo-600 mb-1">
+            Total funds (all chains): {totalRaisedAllChainsEth} ETH
+          </p>
+        )}
         <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
           <div
             className="h-full bg-indigo-600 transition-all duration-300"
@@ -449,7 +487,7 @@ export function CampaignDetail() {
                         <XAxis dataKey="time" tick={{ fontSize: 10 }} />
                         <YAxis
                           tick={{ fontSize: 10 }}
-                          tickFormatter={(v) => `${v.toFixed(2)}`}
+                          tickFormatter={(v: number) => `${v.toFixed(2)}`}
                         />
                         <Tooltip
                           formatter={(value: number) => [`${value.toFixed(4)} ETH`, "Cumulative"]}
@@ -593,14 +631,25 @@ export function CampaignDetail() {
 
       {isWrongNetwork && switchChain && (
         <div className="mb-4 p-3 rounded bg-amber-50 text-amber-800">
-          <p>Switch to Sepolia to contribute or withdraw.</p>
-          <button
-            type="button"
-            onClick={() => switchChain({ chainId: sepolia.id })}
-            className="mt-2 px-4 py-2 bg-amber-600 text-white rounded hover:bg-amber-700"
-          >
-            Switch to Sepolia
-          </button>
+          <p className="mb-2">
+            {addressesByChain.length > 0
+              ? "Switch to a network where this campaign accepts contributions:"
+              : "Switch to a supported network (Ethereum, Polygon, Arbitrum, or Sepolia) to contribute."}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {(addressesByChain.length > 0 ? addressesByChain : [{ chainId: 1 }, { chainId: 137 }, { chainId: 42161 }, { chainId: 11155111 }]).map(
+              (item: { chainId: number }) => (
+                <button
+                  key={item.chainId}
+                  type="button"
+                  onClick={() => switchChain({ chainId: item.chainId })}
+                  className="px-3 py-1.5 bg-amber-600 text-white rounded hover:bg-amber-700 text-sm"
+                >
+                  {getChainName(item.chainId)}
+                </button>
+              )
+            )}
+          </div>
         </div>
       )}
 
@@ -675,11 +724,11 @@ export function CampaignDetail() {
               {getTransactionErrorMessage(contributeTxError ?? contributeError)}
             </p>
           )}
-          {contributeSuccessTx && (
+          {contributeSuccessTx && currentChainId != null && (
             <p className="mb-3 text-sm text-green-600">
               Contribution confirmed!{" "}
               <a
-                href={`${SEPOLIA_ETHERSCAN_TX}${contributeSuccessTx}`}
+                href={getBlockExplorerTxUrl(currentChainId, contributeSuccessTx)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="underline"
@@ -736,7 +785,7 @@ export function CampaignDetail() {
                 <span>{(Number(c.amountWei) / 1e18).toFixed(4)} ETH</span>
                 {c.txHash && (
                   <a
-                    href={`${SEPOLIA_ETHERSCAN_TX}${c.txHash}`}
+                    href={getBlockExplorerTxUrl(c.chainId ?? 1, c.txHash)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-indigo-600 hover:underline"

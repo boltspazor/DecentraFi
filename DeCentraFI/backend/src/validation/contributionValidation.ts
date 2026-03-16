@@ -6,12 +6,16 @@ const ETH_ADDRESS_REGEX = /^0x[a-fA-F0-9]{40}$/;
 const TX_HASH_REGEX = /^0x[a-fA-F0-9]{64}$/;
 const WEI_REGEX = /^\d+$/;
 
+/** Supported chain IDs: Ethereum, Polygon, Arbitrum, Sepolia. */
+export const SUPPORTED_CHAIN_IDS = [1, 137, 42161, 11155111] as const;
+
 export function validateContributionBody(body: {
   campaignId?: unknown;
   contributorAddress?: unknown;
   amountWei?: unknown;
   txHash?: unknown;
-}): { valid: true; data: { campaignId: number; contributorAddress: string; amountWei: string; txHash: string } } | { valid: false; statusCode: number; error: string } {
+  chainId?: unknown;
+}): { valid: true; data: { campaignId: number; contributorAddress: string; amountWei: string; txHash: string; chainId: number } } | { valid: false; statusCode: number; error: string } {
   const cId = body.campaignId;
   if (cId === undefined || cId === null) {
     return { valid: false, statusCode: 400, error: "campaignId is required" };
@@ -48,6 +52,16 @@ export function validateContributionBody(body: {
     return { valid: false, statusCode: 400, error: "Invalid txHash" };
   }
 
+  const chainIdRaw = body.chainId;
+  const chainId = chainIdRaw === undefined || chainIdRaw === null
+    ? 1
+    : typeof chainIdRaw === "string"
+      ? parseInt(chainIdRaw, 10)
+      : Number(chainIdRaw);
+  if (Number.isNaN(chainId) || !SUPPORTED_CHAIN_IDS.includes(chainId as (typeof SUPPORTED_CHAIN_IDS)[number])) {
+    return { valid: false, statusCode: 400, error: "chainId must be one of: " + SUPPORTED_CHAIN_IDS.join(", ") };
+  }
+
   return {
     valid: true,
     data: {
@@ -55,6 +69,7 @@ export function validateContributionBody(body: {
       contributorAddress: contributorAddress.toLowerCase(),
       amountWei,
       txHash: txHashVal,
+      chainId,
     },
   };
 }

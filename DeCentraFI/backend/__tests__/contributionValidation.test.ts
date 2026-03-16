@@ -22,7 +22,41 @@ describe("contributionValidation", () => {
         expect(result.data.contributorAddress).toBe(validAddress.toLowerCase());
         expect(result.data.amountWei).toBe("1000000000000000000");
         expect(result.data.txHash).toBe(validTxHash);
+        expect(result.data.chainId).toBe(1);
       }
+    });
+
+    it("should accept valid chainId and default to 1 when omitted", () => {
+      const withChain = validateContributionBody({
+        campaignId: 1,
+        contributorAddress: validAddress,
+        amountWei: "1",
+        txHash: validTxHash,
+        chainId: 137,
+      });
+      expect(withChain.valid).toBe(true);
+      if (withChain.valid) expect(withChain.data.chainId).toBe(137);
+
+      const omitted = validateContributionBody({
+        campaignId: 1,
+        contributorAddress: validAddress,
+        amountWei: "1",
+        txHash: validTxHash,
+      });
+      expect(omitted.valid).toBe(true);
+      if (omitted.valid) expect(omitted.data.chainId).toBe(1);
+    });
+
+    it("should return 400 for unsupported chainId", () => {
+      const result = validateContributionBody({
+        campaignId: 1,
+        contributorAddress: validAddress,
+        amountWei: "1",
+        txHash: validTxHash,
+        chainId: 999,
+      });
+      expect(result.valid).toBe(false);
+      if (!result.valid) expect(result.error).toMatch(/chainId|1, 137, 42161/);
     });
 
     it("should return 400 for missing campaignId", () => {

@@ -27,13 +27,23 @@ export interface CampaignMeta {
   createdAt: string;
 }
 
-/** GET /campaigns/:id response: campaign + optional contributors + creator trust score + reportCount. */
+/** Campaign deployment address per chain for multi-chain contributions. */
+export interface CampaignChainAddress {
+  chainId: number;
+  campaignAddress: string;
+}
+
+/** GET /campaigns/:id response: campaign + optional contributors + creator trust score + reportCount + multi-chain. */
 export interface GetCampaignResponse extends CampaignMeta {
   contributors?: ContributionMeta[];
   /** Creator trust score 0–10 from successful/failed campaign history. */
   creatorTrustScore?: number;
   /** Number of reports submitted for this campaign. */
   reportCount?: number;
+  /** Total raised across all chains (wei string). */
+  totalRaisedAllChains?: string;
+  /** Campaign contract address per chain. */
+  addressesByChain?: CampaignChainAddress[];
 }
 
 export interface ReportItem {
@@ -285,6 +295,7 @@ export interface ContributionMeta {
   contributorAddress: string;
   amountWei: string;
   txHash: string;
+  chainId?: number;
   createdAt: string;
 }
 
@@ -293,6 +304,7 @@ export async function postContribution(data: {
   contributorAddress: string;
   amountWei: string;
   txHash: string;
+  chainId: number;
 }): Promise<ContributionMeta> {
   const res = await fetch(`${API_BASE}/api/contributions`, {
     method: "POST",

@@ -11,9 +11,9 @@ export async function createContribution(req: Request, res: Response) {
     }
     const { data } = validation;
 
-    const existing = await contributionService.findByTxHash(data.txHash);
+    const existing = await contributionService.findByTxHashAndChain(data.txHash, data.chainId);
     if (existing) {
-      return res.status(409).json({ error: "Contribution with this transaction hash already recorded" });
+      return res.status(409).json({ error: "Contribution with this transaction hash already recorded on this chain" });
     }
 
     const campaign = await campaignService.findById(String(data.campaignId));
@@ -26,6 +26,7 @@ export async function createContribution(req: Request, res: Response) {
       contributorAddress: data.contributorAddress,
       amountWei: data.amountWei,
       txHash: data.txHash,
+      chainId: data.chainId,
     });
 
     const newTotal = BigInt(campaign.total_raised ?? "0") + BigInt(data.amountWei);
@@ -42,6 +43,7 @@ export async function createContribution(req: Request, res: Response) {
       contributorAddress: contribution.contributor_address,
       amountWei: contribution.amount_wei,
       txHash: contribution.tx_hash,
+      chainId: contribution.chain_id,
       createdAt: contribution.created_at,
     });
   } catch (err) {
@@ -72,6 +74,7 @@ export async function getContributionsByCampaign(req: Request, res: Response) {
         contributorAddress: c.contributor_address,
         amountWei: c.amount_wei,
         txHash: c.tx_hash,
+        chainId: c.chain_id,
         createdAt: c.created_at,
       }))
     );

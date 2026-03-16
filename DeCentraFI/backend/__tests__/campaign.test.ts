@@ -21,11 +21,16 @@ jest.unstable_mockModule("../src/services/campaignService.js", () => ({
   findByCampaignAddress: jest.fn(() => Promise.resolve(null)),
   updateTotalRaisedAndStatus: jest.fn(() => Promise.resolve()),
   getCreatorTrustScore: (...args: unknown[]) => mockGetCreatorTrustScore(...args),
+  getAddressesByChain: jest.fn(() => Promise.resolve([])),
+  getTotalRaisedAllChains: jest.fn(() => Promise.resolve("0")),
 }));
 jest.unstable_mockModule("../src/services/contributionService.js", () => ({
   findByCampaignId: jest.fn(() => Promise.resolve([])),
   create: jest.fn(),
-  findByTxHash: jest.fn(),
+  findByTxHashAndChain: jest.fn(() => Promise.resolve(null)),
+}));
+jest.unstable_mockModule("../src/services/reportService.js", () => ({
+  getReportCountByCampaignId: jest.fn(() => Promise.resolve(0)),
 }));
 
 const { default: app } = await import("../src/app.js");

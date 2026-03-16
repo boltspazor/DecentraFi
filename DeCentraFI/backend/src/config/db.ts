@@ -32,12 +32,34 @@ export async function connectDb(): Promise<void> {
         campaign_id INTEGER NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
         contributor_address VARCHAR(42) NOT NULL,
         amount_wei VARCHAR(78) NOT NULL,
-        tx_hash VARCHAR(66) NOT NULL UNIQUE,
+        tx_hash VARCHAR(66) NOT NULL,
+        chain_id INTEGER NOT NULL DEFAULT 1,
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_contributions_campaign_id ON contributions(campaign_id);`);
-    await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_contributions_tx_hash ON contributions(tx_hash);`);
+    await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_contributions_chain_tx ON contributions(chain_id, tx_hash);`);
+    try {
+      await client.query(`ALTER TABLE contributions ADD COLUMN chain_id INTEGER NOT NULL DEFAULT 1`);
+    } catch (e: unknown) {
+      const err = e as { code?: string };
+      if (err.code !== "42701") throw e;
+    }
+    try {
+      await client.query(`DROP INDEX IF EXISTS idx_contributions_tx_hash`);
+    } catch {
+      // ignore
+    }
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS campaign_chain_addresses (
+        campaign_id INTEGER NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
+        chain_id INTEGER NOT NULL,
+        campaign_address VARCHAR(42) NOT NULL,
+        PRIMARY KEY (campaign_id, chain_id)
+      );
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_campaign_chain_addresses_campaign ON campaign_chain_addresses(campaign_id);`);
 
     await client.query(`
       CREATE TABLE IF NOT EXISTS campaign_reports (

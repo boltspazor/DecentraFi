@@ -118,11 +118,18 @@ export async function getCampaign(req: Request, res: Response) {
     }
     const contributors = await contributionService.findByCampaignId(numId);
     const reportCount = await reportService.getReportCountByCampaignId(numId);
+    const addressesByChain = await campaignService.getAddressesByChain(numId);
+    const totalRaisedAllChains = await campaignService.getTotalRaisedAllChains(numId);
     const payload = formatCampaign(campaign);
     const { trustScore: creatorTrustScore } = await campaignService.getCreatorTrustScore(campaign.creator);
-    /** Response shape: campaign (camelCase, dates ISO) + contributors[] (camelCase) + creatorTrustScore + reportCount. */
+    const addressesByChainRes =
+      addressesByChain.length > 0
+        ? addressesByChain
+        : [{ chainId: 1, campaignAddress: campaign.campaign_address }];
     return res.json({
       ...payload,
+      totalRaisedAllChains,
+      addressesByChain: addressesByChainRes,
       creatorTrustScore,
       reportCount,
       contributors: contributors.map((c) => ({
@@ -130,6 +137,7 @@ export async function getCampaign(req: Request, res: Response) {
         contributorAddress: c.contributor_address,
         amountWei: c.amount_wei,
         txHash: c.tx_hash,
+        chainId: c.chain_id,
         createdAt: c.created_at,
       })),
     });

@@ -40,9 +40,9 @@ describe("analyticsService.getCampaignAnalytics", () => {
   it("handles campaign with a single contributor", async () => {
     const amountWei = "1000000000000000000"; // 1 ETH
     await pool.query(
-      `INSERT INTO contributions (campaign_id, contributor_address, amount_wei, tx_hash)
-       VALUES ($1, $2, $3, $4)`,
-      [campaignId, "0xcontrib1", amountWei, "0xtx1"]
+      `INSERT INTO contributions (campaign_id, contributor_address, amount_wei, tx_hash, chain_id)
+       VALUES ($1, $2, $3, $4, 1)`,
+      [campaignId, "0xcontrib1", amountWei, "0x" + "1".padStart(64, "0")]
     );
 
     const analytics = await analyticsService.getCampaignAnalytics(campaignId);
@@ -57,13 +57,13 @@ describe("analyticsService.getCampaignAnalytics", () => {
     for (let i = 0; i < 200; i += 1) {
       inserts.push(
         pool.query(
-          `INSERT INTO contributions (campaign_id, contributor_address, amount_wei, tx_hash, created_at)
-           VALUES ($1, $2, $3, $4, NOW() + ($5 || ' seconds')::interval)`,
+          `INSERT INTO contributions (campaign_id, contributor_address, amount_wei, tx_hash, chain_id, created_at)
+           VALUES ($1, $2, $3, $4, 1, NOW() + ($5 || ' seconds')::interval)`,
           [
             campaignId,
-            `0xcontrib${i % 10}`,
+            `0xcontrib${i % 10}`.padEnd(42, "0"),
             "1000000000000000", // 0.001 ETH
-            `0xtx${i}`,
+            "0x" + i.toString(16).padStart(64, "0"),
             i.toString(),
           ]
         )

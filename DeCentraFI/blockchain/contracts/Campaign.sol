@@ -59,6 +59,8 @@ contract Campaign is ReentrancyGuard {
     event ProposalCreated(uint256 indexed proposalId, string description);
     event ProposalVoted(uint256 indexed proposalId, address indexed voter);
     event ProposalExecuted(uint256 indexed proposalId);
+    /// @notice Emitted for cross-chain indexing: same as Contributed but includes chainId for multi-chain tracking.
+    event CrossChainDeposit(address indexed contributor, uint256 amount, uint256 chainId);
 
     error ZeroContribution();
     error CampaignEnded();
@@ -142,6 +144,12 @@ contract Campaign is ReentrancyGuard {
         }
         emit Contributed(msg.sender, msg.value);
         emit ContributionReceived(msg.sender, msg.value);
+        emit CrossChainDeposit(msg.sender, msg.value, block.chainid);
+    }
+
+    /// @notice Current chain id for cross-chain indexing and frontend display.
+    function getChainId() external view returns (uint256) {
+        return block.chainid;
     }
 
     /// @notice After deadline, if goal was met, only creator can release full balance. Funds stay in escrow until deadline.
