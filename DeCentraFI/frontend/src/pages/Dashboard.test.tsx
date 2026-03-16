@@ -14,6 +14,7 @@ vi.mock("wagmi", () => ({
 
 vi.mock("../services/api", () => ({
   getUserContributions: vi.fn(),
+  getUserNfts: vi.fn(),
 }));
 
 const refetchCampaignMock = vi.fn();
@@ -36,7 +37,7 @@ vi.mock("../services/campaignEvents", () => ({
 }));
 
 import { useAccount } from "wagmi";
-import { getUserContributions } from "../services/api";
+import { getUserContributions, getUserNfts } from "../services/api";
 import { useCampaign } from "../services/campaignContract";
 
 function renderDashboard(initialEntries: string[] = ["/dashboard"]) {
@@ -59,6 +60,7 @@ describe("Dashboard", () => {
       isConnected: true,
     } as never);
     vi.mocked(getUserContributions).mockResolvedValue([]);
+    vi.mocked(getUserNfts).mockResolvedValue([]);
     refetchCampaignMock.mockClear();
     capturedEventHandlers = {};
   });
@@ -101,6 +103,7 @@ describe("Dashboard", () => {
 
   it("shows connect wallet message when not connected", () => {
     vi.mocked(getUserContributions).mockClear();
+    vi.mocked(getUserNfts).mockClear();
     vi.mocked(useAccount).mockReturnValue({
       address: undefined,
       isConnected: false,
@@ -109,6 +112,7 @@ describe("Dashboard", () => {
     expect(screen.getByRole("heading", { name: /your dashboard/i })).toBeInTheDocument();
     expect(screen.getByText(/connect your wallet to view campaigns you have funded/i)).toBeInTheDocument();
     expect(getUserContributions).not.toHaveBeenCalled();
+    expect(getUserNfts).not.toHaveBeenCalled();
   });
 
   describe("event-driven updates", () => {

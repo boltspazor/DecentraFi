@@ -1,7 +1,12 @@
 import { useAccount } from "wagmi";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { getUserContributions, type UserContributionSummary } from "../services/api";
+import {
+  getUserContributions,
+  getUserNfts,
+  type UserContributionSummary,
+  type UserNft,
+} from "../services/api";
 import { useCampaign } from "../services/campaignContract";
 import { useCampaignEvents } from "../services/campaignEvents";
 
@@ -80,10 +85,27 @@ function DashboardRow({ item }: { item: UserContributionSummary }) {
 export function Dashboard() {
   const { address, isConnected } = useAccount();
 
-  const { data, isLoading, error, refetch, isFetching } = useQuery<UserContributionSummary[]>({
+  const {
+    data,
+    isLoading,
+    error,
+    refetch,
+    isFetching,
+  } = useQuery<UserContributionSummary[]>({
     queryKey: ["user-contributions", address],
     enabled: !!address,
     queryFn: () => getUserContributions(address!),
+    retry: 2,
+  });
+
+  const {
+    data: nftData,
+    isLoading: isLoadingNfts,
+    error: nftError,
+  } = useQuery<UserNft[]>({
+    queryKey: ["user-nfts", address],
+    enabled: !!address,
+    queryFn: () => getUserNfts(address!),
     retry: 2,
   });
 
@@ -99,12 +121,13 @@ export function Dashboard() {
   }
 
   const list = Array.isArray(data) ? data : [];
+  const nftList = Array.isArray(nftData) ? nftData : [];
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
       <h1 className="text-2xl font-bold text-gray-900 mb-4">Your Dashboard</h1>
       <p className="text-gray-600 mb-4">
-        Overview of campaigns you have contributed to, including progress and refund eligibility.
+        Overview of campaigns you have contributed to and your Supporter Badge NFTs.
       </p>
 
       {isLoading && <p className="text-gray-500">Loading your contributions…</p>}
@@ -135,6 +158,68 @@ export function Dashboard() {
           </ul>
         </>
       )}
+
+      <div className="mt-10 border-t border-gray-200 pt-6">
+        <h2 className="text-xl font-semibold text-gray-900 mb-3">Supporter Badge NFTs</h2>
+        {isLoadingNfts && <p className="text-gray-500">Loading your supporter NFTs…</p>}
+        {!isLoadingNfts && nftError && (
+          <p className="text-sm text-red-600">Failed to load your supporter NFTs.</p>
+        )}
+        {!isLoadingNfts && !nftError && nftList.length === 0 && (
+          <p className="text-gray-500 text-sm">
+            You do not have any supporter badge NFTs yet. Contribute to campaigns to earn Bronze,
+            Silver, or Gold badges.
+          </p>
+        )}
+        {!isLoadingNfts && !nftError && nftList.length > 0 && (
+          <ul className="mt-2 space-y-2">
+            {nftList.map((nft) => {
+              const levelLabel =
+                nft.nftLevel.toLowerCase() === "gold"
+                  ? "Gold"
+                  : nft.nftLevel.toLowerCase() === "silver"
+                  ? "Silver"
+                  : nft.nftLevel.toLowerCase() === "bronze"
+                  ? "Bronze"
+                  : nft.nftLevel;
+              const ipfsUrl = nft.ipfsHash
+                ? `https://ipfs.io/ipfs/${nft.ipfsHash}`
+                : undefined;
+              return (
+                <li
+                  key={`${nft.tokenId}-${nft.campaignId}-${nft.createdAt}`}
+                  className="flex items-center justify-between bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                >
+                  <div>
+                    <p className="font-medium text-gray-900">
+                      {levelLabel} Supporter Badge • Token #{nft.tokenId}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Campaign ID:{" "}
+                      <Link
+                        to={`/campaigns/${nft.campaignId}`}
+                        className="text-indigo-600 hover:underline"
+                      >
+                        {nft.campaignId}
+                      </Link>
+                    </p>
+                  </div>
+                  {ipfsUrl && (
+                    <a
+                      href={ipfsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-indigo-600 hover:underline"
+                    >
+                      View NFT
+                    </a>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }

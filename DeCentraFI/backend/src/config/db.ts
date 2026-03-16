@@ -72,6 +72,21 @@ export async function connectDb(): Promise<void> {
         if (err.code !== "42701") throw e;
       }
     }
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS supporter_nfts (
+        id SERIAL PRIMARY KEY,
+        token_id BIGINT NOT NULL,
+        campaign_id INTEGER NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
+        contributor_wallet VARCHAR(42) NOT NULL,
+        nft_level VARCHAR(16) NOT NULL,
+        ipfs_hash TEXT NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    await client.query(
+      `CREATE INDEX IF NOT EXISTS idx_supporter_nfts_wallet ON supporter_nfts(contributor_wallet)`
+    );
   } finally {
     client.release();
   }
