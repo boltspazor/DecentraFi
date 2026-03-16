@@ -3,3 +3,4 @@
 /* eslint-disable */
 export { Campaign__factory } from "./Campaign__factory";
 export { CampaignFactory__factory } from "./CampaignFactory__factory";
+export { SupporterNFT__factory } from "./SupporterNFT__factory";

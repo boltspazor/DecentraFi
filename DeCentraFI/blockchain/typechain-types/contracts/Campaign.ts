@@ -32,18 +32,24 @@ export interface CampaignInterface extends Interface {
       | "closed"
       | "contribute"
       | "contributions"
+      | "createProposal"
       | "creator"
       | "deadline"
+      | "executeProposal"
       | "finalizeAfterDeadline"
       | "finalized"
       | "fundsReleased"
       | "fundsWithdrawn"
+      | "getChainId"
+      | "getProposalCount"
       | "goal"
       | "goalReached"
       | "isVerified"
       | "milestoneApprovalWeight"
       | "milestoneVoted"
       | "milestones"
+      | "proposalVoted"
+      | "proposals"
       | "refund"
       | "refundEnabled"
       | "releaseFunds"
@@ -56,6 +62,7 @@ export interface CampaignInterface extends Interface {
       | "totalMilestoneReleased"
       | "totalRaised"
       | "verifyCampaign"
+      | "voteProposal"
       | "withdrawFunds"
   ): FunctionFragment;
 
@@ -66,10 +73,14 @@ export interface CampaignInterface extends Interface {
       | "CampaignVerified"
       | "Contributed"
       | "ContributionReceived"
+      | "CrossChainDeposit"
       | "FundsReleased"
       | "MilestoneApproved"
       | "MilestoneCreated"
       | "MilestoneFundsReleased"
+      | "ProposalCreated"
+      | "ProposalExecuted"
+      | "ProposalVoted"
       | "Refund"
       | "RefundClaimed"
       | "Withdrawal"
@@ -93,8 +104,16 @@ export interface CampaignInterface extends Interface {
     functionFragment: "contributions",
     values: [AddressLike]
   ): string;
+  encodeFunctionData(
+    functionFragment: "createProposal",
+    values: [string]
+  ): string;
   encodeFunctionData(functionFragment: "creator", values?: undefined): string;
   encodeFunctionData(functionFragment: "deadline", values?: undefined): string;
+  encodeFunctionData(
+    functionFragment: "executeProposal",
+    values: [BigNumberish]
+  ): string;
   encodeFunctionData(
     functionFragment: "finalizeAfterDeadline",
     values?: undefined
@@ -106,6 +125,14 @@ export interface CampaignInterface extends Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "fundsWithdrawn",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "getChainId",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "getProposalCount",
     values?: undefined
   ): string;
   encodeFunctionData(functionFragment: "goal", values?: undefined): string;
@@ -127,6 +154,14 @@ export interface CampaignInterface extends Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "milestones",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "proposalVoted",
+    values: [BigNumberish, AddressLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "proposals",
     values: [BigNumberish]
   ): string;
   encodeFunctionData(functionFragment: "refund", values?: undefined): string;
@@ -175,6 +210,10 @@ export interface CampaignInterface extends Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
+    functionFragment: "voteProposal",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
     functionFragment: "withdrawFunds",
     values?: undefined
   ): string;
@@ -194,8 +233,16 @@ export interface CampaignInterface extends Interface {
     functionFragment: "contributions",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(
+    functionFragment: "createProposal",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "creator", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "deadline", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "executeProposal",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(
     functionFragment: "finalizeAfterDeadline",
     data: BytesLike
@@ -207,6 +254,11 @@ export interface CampaignInterface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "fundsWithdrawn",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(functionFragment: "getChainId", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "getProposalCount",
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "goal", data: BytesLike): Result;
@@ -224,6 +276,11 @@ export interface CampaignInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "milestones", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "proposalVoted",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(functionFragment: "proposals", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "refund", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "refundEnabled",
@@ -264,6 +321,10 @@ export interface CampaignInterface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "verifyCampaign",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "voteProposal",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -334,6 +395,28 @@ export namespace ContributionReceivedEvent {
   export type LogDescription = TypedLogDescription<Event>;
 }
 
+export namespace CrossChainDepositEvent {
+  export type InputTuple = [
+    contributor: AddressLike,
+    amount: BigNumberish,
+    chainId: BigNumberish
+  ];
+  export type OutputTuple = [
+    contributor: string,
+    amount: bigint,
+    chainId: bigint
+  ];
+  export interface OutputObject {
+    contributor: string;
+    amount: bigint;
+    chainId: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
 export namespace FundsReleasedEvent {
   export type InputTuple = [creator: AddressLike, amount: BigNumberish];
   export type OutputTuple = [creator: string, amount: bigint];
@@ -391,6 +474,44 @@ export namespace MilestoneFundsReleasedEvent {
   export interface OutputObject {
     milestoneId: bigint;
     amount: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace ProposalCreatedEvent {
+  export type InputTuple = [proposalId: BigNumberish, description: string];
+  export type OutputTuple = [proposalId: bigint, description: string];
+  export interface OutputObject {
+    proposalId: bigint;
+    description: string;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace ProposalExecutedEvent {
+  export type InputTuple = [proposalId: BigNumberish];
+  export type OutputTuple = [proposalId: bigint];
+  export interface OutputObject {
+    proposalId: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace ProposalVotedEvent {
+  export type InputTuple = [proposalId: BigNumberish, voter: AddressLike];
+  export type OutputTuple = [proposalId: bigint, voter: string];
+  export interface OutputObject {
+    proposalId: bigint;
+    voter: string;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Filter = TypedDeferredTopicFilter<Event>;
@@ -496,9 +617,21 @@ export interface Campaign extends BaseContract {
 
   contributions: TypedContractMethod<[arg0: AddressLike], [bigint], "view">;
 
+  createProposal: TypedContractMethod<
+    [description: string],
+    [void],
+    "nonpayable"
+  >;
+
   creator: TypedContractMethod<[], [string], "view">;
 
   deadline: TypedContractMethod<[], [bigint], "view">;
+
+  executeProposal: TypedContractMethod<
+    [proposalId: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
 
   finalizeAfterDeadline: TypedContractMethod<[], [void], "nonpayable">;
 
@@ -507,6 +640,10 @@ export interface Campaign extends BaseContract {
   fundsReleased: TypedContractMethod<[], [boolean], "view">;
 
   fundsWithdrawn: TypedContractMethod<[], [boolean], "view">;
+
+  getChainId: TypedContractMethod<[], [bigint], "view">;
+
+  getProposalCount: TypedContractMethod<[], [bigint], "view">;
 
   goal: TypedContractMethod<[], [bigint], "view">;
 
@@ -529,6 +666,24 @@ export interface Campaign extends BaseContract {
   milestones: TypedContractMethod<
     [arg0: BigNumberish],
     [[bigint, boolean] & { percentage: bigint; released: boolean }],
+    "view"
+  >;
+
+  proposalVoted: TypedContractMethod<
+    [arg0: BigNumberish, arg1: AddressLike],
+    [boolean],
+    "view"
+  >;
+
+  proposals: TypedContractMethod<
+    [arg0: BigNumberish],
+    [
+      [string, bigint, boolean] & {
+        description: string;
+        voteCount: bigint;
+        executed: boolean;
+      }
+    ],
     "view"
   >;
 
@@ -564,6 +719,12 @@ export interface Campaign extends BaseContract {
 
   verifyCampaign: TypedContractMethod<[], [void], "nonpayable">;
 
+  voteProposal: TypedContractMethod<
+    [proposalId: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+
   withdrawFunds: TypedContractMethod<[], [void], "nonpayable">;
 
   getFunction<T extends ContractMethod = ContractMethod>(
@@ -589,11 +750,17 @@ export interface Campaign extends BaseContract {
     nameOrSignature: "contributions"
   ): TypedContractMethod<[arg0: AddressLike], [bigint], "view">;
   getFunction(
+    nameOrSignature: "createProposal"
+  ): TypedContractMethod<[description: string], [void], "nonpayable">;
+  getFunction(
     nameOrSignature: "creator"
   ): TypedContractMethod<[], [string], "view">;
   getFunction(
     nameOrSignature: "deadline"
   ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "executeProposal"
+  ): TypedContractMethod<[proposalId: BigNumberish], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "finalizeAfterDeadline"
   ): TypedContractMethod<[], [void], "nonpayable">;
@@ -606,6 +773,12 @@ export interface Campaign extends BaseContract {
   getFunction(
     nameOrSignature: "fundsWithdrawn"
   ): TypedContractMethod<[], [boolean], "view">;
+  getFunction(
+    nameOrSignature: "getChainId"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "getProposalCount"
+  ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
     nameOrSignature: "goal"
   ): TypedContractMethod<[], [bigint], "view">;
@@ -630,6 +803,26 @@ export interface Campaign extends BaseContract {
   ): TypedContractMethod<
     [arg0: BigNumberish],
     [[bigint, boolean] & { percentage: bigint; released: boolean }],
+    "view"
+  >;
+  getFunction(
+    nameOrSignature: "proposalVoted"
+  ): TypedContractMethod<
+    [arg0: BigNumberish, arg1: AddressLike],
+    [boolean],
+    "view"
+  >;
+  getFunction(
+    nameOrSignature: "proposals"
+  ): TypedContractMethod<
+    [arg0: BigNumberish],
+    [
+      [string, bigint, boolean] & {
+        description: string;
+        voteCount: bigint;
+        executed: boolean;
+      }
+    ],
     "view"
   >;
   getFunction(
@@ -668,6 +861,9 @@ export interface Campaign extends BaseContract {
   getFunction(
     nameOrSignature: "verifyCampaign"
   ): TypedContractMethod<[], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "voteProposal"
+  ): TypedContractMethod<[proposalId: BigNumberish], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "withdrawFunds"
   ): TypedContractMethod<[], [void], "nonpayable">;
@@ -708,6 +904,13 @@ export interface Campaign extends BaseContract {
     ContributionReceivedEvent.OutputObject
   >;
   getEvent(
+    key: "CrossChainDeposit"
+  ): TypedContractEvent<
+    CrossChainDepositEvent.InputTuple,
+    CrossChainDepositEvent.OutputTuple,
+    CrossChainDepositEvent.OutputObject
+  >;
+  getEvent(
     key: "FundsReleased"
   ): TypedContractEvent<
     FundsReleasedEvent.InputTuple,
@@ -734,6 +937,27 @@ export interface Campaign extends BaseContract {
     MilestoneFundsReleasedEvent.InputTuple,
     MilestoneFundsReleasedEvent.OutputTuple,
     MilestoneFundsReleasedEvent.OutputObject
+  >;
+  getEvent(
+    key: "ProposalCreated"
+  ): TypedContractEvent<
+    ProposalCreatedEvent.InputTuple,
+    ProposalCreatedEvent.OutputTuple,
+    ProposalCreatedEvent.OutputObject
+  >;
+  getEvent(
+    key: "ProposalExecuted"
+  ): TypedContractEvent<
+    ProposalExecutedEvent.InputTuple,
+    ProposalExecutedEvent.OutputTuple,
+    ProposalExecutedEvent.OutputObject
+  >;
+  getEvent(
+    key: "ProposalVoted"
+  ): TypedContractEvent<
+    ProposalVotedEvent.InputTuple,
+    ProposalVotedEvent.OutputTuple,
+    ProposalVotedEvent.OutputObject
   >;
   getEvent(
     key: "Refund"
@@ -813,6 +1037,17 @@ export interface Campaign extends BaseContract {
       ContributionReceivedEvent.OutputObject
     >;
 
+    "CrossChainDeposit(address,uint256,uint256)": TypedContractEvent<
+      CrossChainDepositEvent.InputTuple,
+      CrossChainDepositEvent.OutputTuple,
+      CrossChainDepositEvent.OutputObject
+    >;
+    CrossChainDeposit: TypedContractEvent<
+      CrossChainDepositEvent.InputTuple,
+      CrossChainDepositEvent.OutputTuple,
+      CrossChainDepositEvent.OutputObject
+    >;
+
     "FundsReleased(address,uint256)": TypedContractEvent<
       FundsReleasedEvent.InputTuple,
       FundsReleasedEvent.OutputTuple,
@@ -855,6 +1090,39 @@ export interface Campaign extends BaseContract {
       MilestoneFundsReleasedEvent.InputTuple,
       MilestoneFundsReleasedEvent.OutputTuple,
       MilestoneFundsReleasedEvent.OutputObject
+    >;
+
+    "ProposalCreated(uint256,string)": TypedContractEvent<
+      ProposalCreatedEvent.InputTuple,
+      ProposalCreatedEvent.OutputTuple,
+      ProposalCreatedEvent.OutputObject
+    >;
+    ProposalCreated: TypedContractEvent<
+      ProposalCreatedEvent.InputTuple,
+      ProposalCreatedEvent.OutputTuple,
+      ProposalCreatedEvent.OutputObject
+    >;
+
+    "ProposalExecuted(uint256)": TypedContractEvent<
+      ProposalExecutedEvent.InputTuple,
+      ProposalExecutedEvent.OutputTuple,
+      ProposalExecutedEvent.OutputObject
+    >;
+    ProposalExecuted: TypedContractEvent<
+      ProposalExecutedEvent.InputTuple,
+      ProposalExecutedEvent.OutputTuple,
+      ProposalExecutedEvent.OutputObject
+    >;
+
+    "ProposalVoted(uint256,address)": TypedContractEvent<
+      ProposalVotedEvent.InputTuple,
+      ProposalVotedEvent.OutputTuple,
+      ProposalVotedEvent.OutputObject
+    >;
+    ProposalVoted: TypedContractEvent<
+      ProposalVotedEvent.InputTuple,
+      ProposalVotedEvent.OutputTuple,
+      ProposalVotedEvent.OutputObject
     >;
 
     "Refund(address,uint256)": TypedContractEvent<

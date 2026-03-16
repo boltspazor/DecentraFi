@@ -324,6 +324,36 @@ export function CampaignDetail() {
     }
   };
 
+  useEffect(() => {
+    if (!contract) return;
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const count = Number(await contract.read.getProposalCount());
+        const items: { id: number; description: string; voteCount: bigint; executed: boolean }[] =
+          [];
+        for (let i = 0; i < count; i += 1) {
+          const [description, voteCount, executed] = await contract.read.proposals([
+            BigInt(i),
+          ]);
+          items.push({
+            id: i,
+            description,
+            voteCount,
+            executed,
+          });
+        }
+        if (!cancelled) setProposals(items);
+      } catch {
+        if (!cancelled) setProposals([]);
+      }
+    };
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [contract, isVoteSuccess, campaignMeta?.id]);
+
   if (loadingMeta) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-8">
@@ -355,36 +385,6 @@ export function CampaignDetail() {
       cumulativeEth: Number(p.cumulativeWei) / 1e18,
       contributionCount: p.contributionCount,
     })) ?? [];
-
-  useEffect(() => {
-    if (!contract) return;
-    let cancelled = false;
-    const load = async () => {
-      try {
-        const count = Number(await contract.read.getProposalCount());
-        const items: { id: number; description: string; voteCount: bigint; executed: boolean }[] =
-          [];
-        for (let i = 0; i < count; i += 1) {
-          const [description, voteCount, executed] = await contract.read.proposals([
-            BigInt(i),
-          ]);
-          items.push({
-            id: i,
-            description,
-            voteCount,
-            executed,
-          });
-        }
-        if (!cancelled) setProposals(items);
-      } catch {
-        if (!cancelled) setProposals([]);
-      }
-    };
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [contract, isVoteSuccess, campaignMeta?.id]);
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">

@@ -201,6 +201,20 @@ describe("Campaign API", () => {
         });
       expect(res.status).toBe(400);
     });
+
+    it("should return 400 for unsupported chainId", async () => {
+      const res = await request(app)
+        .post("/api/contributions")
+        .send({
+          campaignId: 1,
+          contributorAddress: validAddress,
+          amountWei: "1000000000000000000",
+          txHash: validTxHash,
+          chainId: 999,
+        });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/chainId|1, 137, 42161/);
+    });
   });
 
   describe("GET /api/contributions/campaign/:id", () => {

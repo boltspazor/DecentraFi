@@ -67,6 +67,39 @@ describe("Campaign", function () {
       .withArgs(contributor1.address, amount);
   });
 
+  describe("Cross-chain deposit logic, event emission, and chain tracking", function () {
+    it("should emit CrossChainDeposit with contributor, amount, and chainId on contribute", async function () {
+      const amount = ethers.parseEther("1.5");
+      const chainId = await campaign.getChainId();
+      await expect(campaign.connect(contributor1).contribute({ value: amount }))
+        .to.emit(campaign, "CrossChainDeposit")
+        .withArgs(contributor1.address, amount, chainId);
+    });
+
+    it("should emit Contributed, ContributionReceived, and CrossChainDeposit on contribute", async function () {
+      const amount = ethers.parseEther("1");
+      const chainId = await campaign.getChainId();
+      const tx = campaign.connect(contributor2).contribute({ value: amount });
+      await expect(tx).to.emit(campaign, "Contributed").withArgs(contributor2.address, amount);
+      await expect(tx).to.emit(campaign, "ContributionReceived").withArgs(contributor2.address, amount);
+      await expect(tx).to.emit(campaign, "CrossChainDeposit").withArgs(contributor2.address, amount, chainId);
+    });
+
+    it("getChainId() should return current network chain id", async function () {
+      const chainId = await campaign.getChainId();
+      const network = await ethers.provider.getNetwork();
+      expect(chainId).to.equal(network.chainId);
+      expect(chainId).to.be.gt(0);
+    });
+
+    it("should track chain id per contribution for multi-chain indexing", async function () {
+      const amount = ethers.parseEther("1");
+      await campaign.connect(contributor1).contribute({ value: amount });
+      const chainId = await campaign.getChainId();
+      expect(chainId).to.equal((await ethers.provider.getNetwork()).chainId);
+    });
+  });
+
   it("should revert contribute with zero ETH", async function () {
     await expect(
       campaign.connect(contributor1).contribute({ value: 0 })

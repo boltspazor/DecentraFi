@@ -16,9 +16,15 @@ const mockCampaignMeta = {
   status: "Active",
   createdAt: new Date().toISOString(),
   creatorTrustScore: 8,
+  totalRaisedAllChains: "0",
+  addressesByChain: [{ chainId: 1, campaignAddress: "0xcampaign000000000000000000000000000000001" }],
 };
 
 const mockContributions: { id: number; campaignId: number; contributorAddress: string; amountWei: string; txHash: string; createdAt: string }[] = [];
+
+vi.mock("../config/wagmiConfig", () => ({
+  SUPPORTED_CHAIN_IDS: [1, 137, 42161, 11155111],
+}));
 
 vi.mock("../services/api", () => ({
   getCampaign: vi.fn(),
@@ -185,9 +191,12 @@ describe("CampaignDetail", () => {
     await waitFor(() => {
       expect(screen.getByRole("heading", { name: /test campaign/i })).toBeInTheDocument();
     });
-    await waitFor(() => {
-      expect(screen.getByText(/failed to load analytics/i)).toBeInTheDocument();
-    });
+    await waitFor(
+      () => {
+        expect(screen.getByText((content) => content.includes("Failed") && content.includes("analytics"))).toBeInTheDocument();
+      },
+      { timeout: 3000 }
+    );
   });
 
   it("displays creator trust score correctly when present", async () => {
@@ -568,8 +577,116 @@ describe("CampaignDetail", () => {
       await waitFor(() => {
         expect(screen.getByText(/executed proposal/i)).toBeInTheDocument();
       });
-      expect(screen.getByText(/executed/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/executed/i).length).toBeGreaterThanOrEqual(1);
       expect(screen.queryByRole("button", { name: /vote/i })).not.toBeInTheDocument();
+    });
+  });
+
+  describe("Multi-chain: balance aggregation and UI", () => {
+    it("displays total funds (all chains) when totalRaisedAllChains > 0", async () => {
+      vi.mocked(api.getCampaign).mockResolvedValue({
+        ...mockCampaignMeta,
+        totalRaisedAllChains: "5000000000000000000",
+        addressesByChain: [
+          { chainId: 1, campaignAddress: "0xcampaign000000000000000000000000000000001" },
+          { chainId: 137, campaignAddress: "0xcampaign000000000000000000000000000000002" },
+        ],
+      } as never);
+      renderCampaignDetail();
+      await waitFor(() => {
+        expect(screen.getByRole("heading", { name: /test campaign/i })).toBeInTheDocument();
+      });
+      expect(screen.getByText(/Total funds \(all chains\): 5\.0000 ETH/i)).toBeInTheDocument();
+    });
+
+    it("does not show total funds (all chains) when totalRaisedAllChains is 0", async () => {
+      vi.mocked(api.getCampaign).mockResolvedValue({
+        ...mockCampaignMeta,
+        totalRaisedAllChains: "0",
+      } as never);
+      renderCampaignDetail();
+      await waitFor(() => {
+        expect(screen.getByRole("heading", { name: /test campaign/i })).toBeInTheDocument();
+      });
+      expect(screen.queryByText(/Total funds \(all chains\)/)).not.toBeInTheDocument();
+    });
+
+    it("shows network switch buttons when wrong network and addressesByChain has multiple chains", async () => {
+      const { useAccount } = await import("wagmi");
+      vi.mocked(useAccount).mockReturnValue({
+        address: "0xuser0000000000000000000000000000000001",
+        isConnected: true,
+        chainId: 999,
+      } as never);
+      vi.mocked(api.getCampaign).mockResolvedValue({
+        ...mockCampaignMeta,
+        addressesByChain: [
+          { chainId: 1, campaignAddress: "0xaaa" },
+          { chainId: 137, campaignAddress: "0xbbb" },
+        ],
+      } as never);
+      renderCampaignDetail();
+      await waitFor(() => {
+        expect(screen.getByRole("heading", { name: /test campaign/i })).toBeInTheDocument();
+      });
+      expect(screen.getByText(/Switch to a network where this campaign accepts contributions/i)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Ethereum/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Polygon/i })).toBeInTheDocument();
+    });
+
+    it("postContribution is called with chainId when contribution tx succeeds", async () => {
+      const { useAccount } = await import("wagmi");
+      vi.mocked(useAccount).mockReturnValue({
+        address: "0xuser0000000000000000000000000000000001",
+        isConnected: true,
+        chainId: 11155111,
+      } as never);
+      const { useContribute } = await import("../services/campaignContract");
+      vi.mocked(useContribute).mockReturnValue({
+        contribute: vi.fn(),
+        isPending: false,
+        isSuccess: true,
+        hash: "0x" + "f".repeat(64),
+        error: null,
+        reset: vi.fn(),
+        contributorAddress: "0xuser0000000000000000000000000000000001",
+      } as never);
+      vi.mocked(api.postContribution).mockResolvedValue({} as never);
+      renderCampaignDetail();
+      await waitFor(
+        () => {
+          expect(api.postContribution).toHaveBeenCalled();
+          const payload = vi.mocked(api.postContribution).mock.calls[0]?.[0];
+          expect(payload).toBeDefined();
+          expect(payload?.chainId).toBe(11155111);
+          expect(payload?.campaignId).toBe(1);
+        },
+        { timeout: 3000 }
+      );
+    });
+  });
+
+  describe("Network switching", () => {
+    it("switch chain button calls switchChain with correct chainId", async () => {
+      const { useAccount, useSwitchChain } = await import("wagmi");
+      const mockSwitchChain = vi.fn();
+      vi.mocked(useAccount).mockReturnValue({
+        address: "0xuser0000000000000000000000000000000001",
+        isConnected: true,
+        chainId: 999,
+      } as never);
+      vi.mocked(useSwitchChain).mockReturnValue({ switchChain: mockSwitchChain, isPending: false } as never);
+      vi.mocked(api.getCampaign).mockResolvedValue({
+        ...mockCampaignMeta,
+        addressesByChain: [{ chainId: 1, campaignAddress: "0xaaa" }],
+      } as never);
+      renderCampaignDetail();
+      await waitFor(() => {
+        expect(screen.getByRole("heading", { name: /test campaign/i })).toBeInTheDocument();
+      });
+      const ethereumButton = screen.getByRole("button", { name: /Ethereum/i });
+      fireEvent.click(ethereumButton);
+      expect(mockSwitchChain).toHaveBeenCalledWith({ chainId: 1 });
     });
   });
 

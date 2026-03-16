@@ -3,3 +3,4 @@
 /* eslint-disable */
 export type { Campaign } from "./Campaign";
 export type { CampaignFactory } from "./CampaignFactory";
+export type { SupporterNFT } from "./SupporterNFT";

@@ -76,7 +76,7 @@ describe("Contributions & campaign detail (integration)", () => {
     expect(res.body).toHaveProperty("createdAt");
   });
 
-  it("should reject duplicate transaction hash with 409", async () => {
+  it("should reject duplicate transaction hash on same chain with 409", async () => {
     if (!campaignId) return;
     const res = await request(app)
       .post("/api/contributions")
@@ -85,9 +85,26 @@ describe("Contributions & campaign detail (integration)", () => {
         contributorAddress: validAddress,
         amountWei: "2000000000000000000",
         txHash: validTxHash1,
+        chainId: 1,
       });
     expect(res.status).toBe(409);
-    expect(res.body.error).toMatch(/transaction hash|already/i);
+    expect(res.body.error).toMatch(/transaction hash|already|chain/i);
+  });
+
+  it("should allow same txHash on different chainId (multi-chain)", async () => {
+    if (!campaignId) return;
+    const txHashOtherChain = "0x" + "e".repeat(64);
+    const res = await request(app)
+      .post("/api/contributions")
+      .send({
+        campaignId,
+        contributorAddress: validAddress,
+        amountWei: "3000000000000000000",
+        txHash: txHashOtherChain,
+        chainId: 137,
+      });
+    expect(res.status).toBe(201);
+    expect(res.body).toMatchObject({ chainId: 137, txHash: txHashOtherChain });
   });
 
   it("should return campaign detail from GET /api/campaigns/:id including creatorTrustScore and multi-chain fields", async () => {

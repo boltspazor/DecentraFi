@@ -1,6 +1,15 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, act } from "@testing-library/react";
 import { WalletConnectButton } from "./WalletConnectButton";
+
+vi.mock("../config/wagmiConfig", () => ({
+  supportedChains: [
+    { id: 1, name: "Ethereum" },
+    { id: 137, name: "Polygon" },
+    { id: 42161, name: "Arbitrum" },
+    { id: 11155111, name: "Sepolia" },
+  ],
+}));
 
 vi.mock("wagmi", () => ({
   useAccount: vi.fn(() => ({
@@ -26,22 +35,42 @@ describe("WalletConnectButton (regression: wallet auth)", () => {
     expect(screen.getByRole("button", { name: /disconnect/i })).toBeInTheDocument();
   });
 
-  it("does not show Switch to Sepolia when on correct chain", () => {
+  it("shows current chain name when connected (Sepolia)", () => {
     render(<WalletConnectButton />);
-    expect(screen.queryByRole("button", { name: /switch to sepolia/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /sepolia/i })).toBeInTheDocument();
   });
 });
 
 describe("WalletConnectButton when wrong network", () => {
-  it("shows Switch to Sepolia when chainId is not Sepolia", async () => {
+  it("shows network selector with styled button when chainId is not supported", async () => {
     const { useAccount, useSwitchChain } = await import("wagmi");
     vi.mocked(useAccount).mockReturnValue({
       address: "0x1234567890123456789012345678901234567890",
       isConnected: true,
-      chainId: 1,
+      chainId: 999,
     } as never);
     vi.mocked(useSwitchChain).mockReturnValue({ switchChain: vi.fn(), isPending: false } as never);
     render(<WalletConnectButton />);
-    expect(screen.getByRole("button", { name: /switch to sepolia/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /chain 999/i })).toBeInTheDocument();
+  });
+
+  it("network switching: clicking a chain calls switchChain with that chainId", async () => {
+    const { useAccount, useSwitchChain } = await import("wagmi");
+    const mockSwitchChain = vi.fn();
+    vi.mocked(useAccount).mockReturnValue({
+      address: "0x1234567890123456789012345678901234567890",
+      isConnected: true,
+      chainId: 999,
+    } as never);
+    vi.mocked(useSwitchChain).mockReturnValue({ switchChain: mockSwitchChain, isPending: false } as never);
+    render(<WalletConnectButton />);
+    await act(async () => {
+      screen.getByRole("button", { name: /chain 999/i }).click();
+    });
+    const ethereumOption = await screen.findByRole("button", { name: /^Ethereum$/i });
+    await act(async () => {
+      ethereumOption.click();
+    });
+    expect(mockSwitchChain).toHaveBeenCalledWith({ chainId: 1 });
   });
 });
