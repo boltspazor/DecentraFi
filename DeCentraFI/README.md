@@ -20,6 +20,16 @@ Decentralized crowdfunding platform (Web3) with wallet-based auth and on-chain c
 
 ## Quick start
 
+### Run with Docker (backend + frontend + postgres + redis)
+
+```bash
+cd decentrafi
+docker compose up --build
+```
+
+- Frontend: `http://localhost:3000`
+- Backend: `http://localhost:3001/health`
+
 ### 1. Blockchain (Sepolia)
 
 ```bash
@@ -55,7 +65,7 @@ Open http://localhost:5173 → connect wallet (Sepolia) → create campaign.
 ## Env files
 
 - **frontend/.env** – `VITE_API_URL`, `VITE_CHAIN_ID` (11155111), `VITE_CAMPAIGN_FACTORY_ADDRESS`, optional `VITE_RPC_URL`, `VITE_WALLETCONNECT_PROJECT_ID`
-- **backend/.env** – `PORT`, `DATABASE_URL` (PostgreSQL)
+- **backend/.env** – `PORT`, `DATABASE_URL` (PostgreSQL), optional `REDIS_URL` + cache TTL envs
 - **blockchain/.env** – `PRIVATE_KEY` (for deploy), optional `SEPOLIA_RPC_URL`
 
 ## License

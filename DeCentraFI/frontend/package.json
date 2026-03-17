@@ -6,12 +6,14 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "start": "serve -s dist -l ${PORT:-3000}",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest"
   },
   "dependencies": {
+    "serve": "^14.2.4",
     "@tanstack/react-query": "^5.59.0",
     "ethers": "^6.16.0",
     "react": "^18.3.1",

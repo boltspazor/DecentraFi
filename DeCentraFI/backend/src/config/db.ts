@@ -6,7 +6,16 @@ const connectionString =
   process.env.DATABASE_URL ||
   "postgresql://localhost:5432/decentrafi";
 
-export const pool = new Pool({ connectionString });
+const max = (() => {
+  const raw = process.env.DATABASE_MAX_CONNECTIONS;
+  if (!raw) return undefined;
+  const n = parseInt(raw, 10);
+  return Number.isNaN(n) ? undefined : Math.max(1, Math.min(n, 20));
+})();
+
+export const pool = new Pool(
+  max !== undefined ? { connectionString, max } : { connectionString }
+);
 
 export async function connectDb(): Promise<void> {
   const client = await pool.connect();

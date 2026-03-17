@@ -1,8 +1,17 @@
 import { Request, Response } from "express";
 import * as campaignService from "../services/campaignService.js";
 import * as reportService from "../services/reportService.js";
+import { cacheGetOrSet } from "../cache/cache.js";
+import { bumpCampaignsCacheVersion, getCampaignsCacheVersion } from "../cache/versions.js";
 
 const ADMIN_WALLET = process.env.ADMIN_WALLET?.toLowerCase();
+
+function ttlSeconds(envKey: string, fallback: number): number {
+  const raw = process.env[envKey];
+  if (!raw) return fallback;
+  const n = parseInt(String(raw), 10);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+}
 
 /** POST /api/campaigns/report — submit a report for a campaign */
 export async function postReport(req: Request, res: Response) {
@@ -27,6 +36,7 @@ export async function postReport(req: Request, res: Response) {
       reporterWallet: reporterWallet.trim(),
       reason: reason != null ? String(reason).trim() || undefined : undefined,
     });
+    await bumpCampaignsCacheVersion();
     return res.status(201).json({
       id: report.id,
       campaignId: report.campaign_id,
@@ -57,16 +67,19 @@ export async function getReportsByCampaignId(req: Request, res: Response) {
     if (!campaign) {
       return res.status(404).json({ error: "Campaign not found" });
     }
-    const reports = await reportService.findByCampaignId(campaignId);
-    return res.json(
-      reports.map((r) => ({
+    const v = await getCampaignsCacheVersion();
+    const ttl = ttlSeconds("CACHE_TTL_REPORTS_SECONDS", 30);
+    const payload = await cacheGetOrSet(`campaigns:reports:v${v}:campaign:${campaignId}`, ttl, async () => {
+      const reports = await reportService.findByCampaignId(campaignId);
+      return reports.map((r) => ({
         id: r.id,
         campaignId: r.campaign_id,
         reporterWallet: r.reporter_wallet,
         reason: r.reason,
         createdAt: r.created_at,
-      }))
-    );
+      }));
+    });
+    return res.json(payload);
   } catch {
     return res.status(500).json({ error: "Internal server error" });
   }
@@ -92,6 +105,7 @@ export async function patchVerify(req: Request, res: Response) {
       return res.status(404).json({ error: "Campaign not found" });
     }
     await campaignService.updateVerified(id, true);
+    await bumpCampaignsCacheVersion();
     const updated = await campaignService.findById(String(id));
     return res.json({
       id: updated!.id,
@@ -106,17 +120,20 @@ export async function patchVerify(req: Request, res: Response) {
 /** GET /api/campaigns/reported — list campaign ids that have reports (admin dashboard) */
 export async function getReportedCampaigns(req: Request, res: Response) {
   try {
-    const ids = await reportService.findCampaignIdsWithReports();
-    const campaigns = await Promise.all(
-      ids.map((id) => campaignService.findById(String(id)))
-    );
-    const list = campaigns.filter(Boolean).map((c) => ({
-      id: c!.id,
-      title: c!.title,
-      campaignAddress: c!.campaign_address,
-      isVerified: c!.is_verified ?? false,
-    }));
-    return res.json({ campaigns: list });
+    const v = await getCampaignsCacheVersion();
+    const ttl = ttlSeconds("CACHE_TTL_REPORTED_CAMPAIGNS_SECONDS", 30);
+    const payload = await cacheGetOrSet(`campaigns:reported:v${v}`, ttl, async () => {
+      const ids = await reportService.findCampaignIdsWithReports();
+      const campaigns = await Promise.all(ids.map((id) => campaignService.findById(String(id))));
+      const list = campaigns.filter(Boolean).map((c) => ({
+        id: c!.id,
+        title: c!.title,
+        campaignAddress: c!.campaign_address,
+        isVerified: c!.is_verified ?? false,
+      }));
+      return { campaigns: list };
+    });
+    return res.json(payload);
   } catch {
     return res.status(500).json({ error: "Internal server error" });
   }

@@ -4,6 +4,15 @@ import * as contributionService from "../services/contributionService.js";
 import * as reportService from "../services/reportService.js";
 import { validateCreateCampaignBody } from "../validation/campaignValidation.js";
 import { validatePatchStatusBody } from "../validation/contributionValidation.js";
+import { cacheGetOrSet } from "../cache/cache.js";
+import { bumpCampaignsCacheVersion, getCampaignsCacheVersion } from "../cache/versions.js";
+
+function ttlSeconds(envKey: string, fallback: number): number {
+  const raw = process.env[envKey];
+  if (!raw) return fallback;
+  const n = parseInt(String(raw), 10);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+}
 
 export async function createCampaign(req: Request, res: Response) {
   try {
@@ -22,6 +31,7 @@ export async function createCampaign(req: Request, res: Response) {
       campaignAddress: data.campaignAddress,
       txHash: data.txHash,
     });
+    await bumpCampaignsCacheVersion();
     return res.status(201).json(formatCampaign(campaign));
   } catch (err) {
     const e = err as NodeJS.ErrnoException & { code?: string };
@@ -37,8 +47,13 @@ export async function createCampaign(req: Request, res: Response) {
 
 export async function getCampaigns(_req: Request, res: Response) {
   try {
-    const campaigns = await campaignService.findAll();
-    return res.json(campaigns.map(formatCampaign));
+    const v = await getCampaignsCacheVersion();
+    const ttl = ttlSeconds("CACHE_TTL_CAMPAIGNS_LIST_SECONDS", 30);
+    const payload = await cacheGetOrSet(`campaigns:list:v${v}`, ttl, async () => {
+      const campaigns = await campaignService.findAll();
+      return campaigns.map(formatCampaign);
+    });
+    return res.json(payload);
   } catch (err) {
     return res.status(500).json({ error: "Internal server error" });
   }
@@ -78,14 +93,27 @@ export async function searchCampaigns(req: Request, res: Response) {
       page: Number.isNaN(parsedPage) ? 1 : parsedPage,
       pageSize: Number.isNaN(parsedPageSize) ? 12 : parsedPageSize,
     };
-
-    const result = await campaignService.searchCampaigns(opts);
-    return res.json({
-      items: result.items.map(formatCampaign),
-      total: result.total,
-      page: result.page,
-      pageSize: result.pageSize,
+    const v = await getCampaignsCacheVersion();
+    const ttl = ttlSeconds("CACHE_TTL_CAMPAIGNS_SEARCH_SECONDS", 20);
+    const key = `campaigns:search:v${v}:${JSON.stringify({
+      q: opts.q ?? null,
+      status: opts.status ?? null,
+      goalMinWei: opts.goalMinWei ?? null,
+      goalMaxWei: opts.goalMaxWei ?? null,
+      deadlineBefore: opts.deadlineBefore ? opts.deadlineBefore.toISOString() : null,
+      page: opts.page,
+      pageSize: opts.pageSize,
+    })}`;
+    const payload = await cacheGetOrSet(key, ttl, async () => {
+      const result = await campaignService.searchCampaigns(opts);
+      return {
+        items: result.items.map(formatCampaign),
+        total: result.total,
+        page: result.page,
+        pageSize: result.pageSize,
+      };
     });
+    return res.json(payload);
   } catch (err) {
     return res.status(500).json({ error: "Internal server error" });
   }
@@ -112,35 +140,41 @@ export async function getCampaign(req: Request, res: Response) {
     if (Number.isNaN(numId) || numId < 1) {
       return res.status(400).json({ error: "Invalid campaign id" });
     }
-    const campaign = await campaignService.findById(String(numId));
-    if (!campaign) {
+    const v = await getCampaignsCacheVersion();
+    const ttl = ttlSeconds("CACHE_TTL_CAMPAIGN_DETAIL_SECONDS", 20);
+    const payload = await cacheGetOrSet(`campaigns:detail:v${v}:id:${numId}`, ttl, async () => {
+      const campaign = await campaignService.findById(String(numId));
+      if (!campaign) return null;
+      const contributors = await contributionService.findByCampaignId(numId);
+      const reportCount = await reportService.getReportCountByCampaignId(numId);
+      const addressesByChain = await campaignService.getAddressesByChain(numId);
+      const totalRaisedAllChains = await campaignService.getTotalRaisedAllChains(numId);
+      const base = formatCampaign(campaign);
+      const { trustScore: creatorTrustScore } = await campaignService.getCreatorTrustScore(campaign.creator);
+      const addressesByChainRes =
+        addressesByChain.length > 0
+          ? addressesByChain
+          : [{ chainId: 1, campaignAddress: campaign.campaign_address }];
+      return {
+        ...base,
+        totalRaisedAllChains,
+        addressesByChain: addressesByChainRes,
+        creatorTrustScore,
+        reportCount,
+        contributors: contributors.map((c) => ({
+          id: c.id,
+          contributorAddress: c.contributor_address,
+          amountWei: c.amount_wei,
+          txHash: c.tx_hash,
+          chainId: c.chain_id,
+          createdAt: c.created_at,
+        })),
+      };
+    });
+    if (!payload) {
       return res.status(404).json({ error: "Campaign not found" });
     }
-    const contributors = await contributionService.findByCampaignId(numId);
-    const reportCount = await reportService.getReportCountByCampaignId(numId);
-    const addressesByChain = await campaignService.getAddressesByChain(numId);
-    const totalRaisedAllChains = await campaignService.getTotalRaisedAllChains(numId);
-    const payload = formatCampaign(campaign);
-    const { trustScore: creatorTrustScore } = await campaignService.getCreatorTrustScore(campaign.creator);
-    const addressesByChainRes =
-      addressesByChain.length > 0
-        ? addressesByChain
-        : [{ chainId: 1, campaignAddress: campaign.campaign_address }];
-    return res.json({
-      ...payload,
-      totalRaisedAllChains,
-      addressesByChain: addressesByChainRes,
-      creatorTrustScore,
-      reportCount,
-      contributors: contributors.map((c) => ({
-        id: c.id,
-        contributorAddress: c.contributor_address,
-        amountWei: c.amount_wei,
-        txHash: c.tx_hash,
-        chainId: c.chain_id,
-        createdAt: c.created_at,
-      })),
-    });
+    return res.json(payload);
   } catch (err) {
     return res.status(500).json({ error: "Internal server error" });
   }
@@ -162,6 +196,7 @@ export async function patchCampaignStatus(req: Request, res: Response) {
       return res.status(404).json({ error: "Campaign not found" });
     }
     await campaignService.updateTotalRaisedAndStatus(numId, campaign.total_raised ?? "0", validation.status);
+    await bumpCampaignsCacheVersion();
     const updated = await campaignService.findById(String(numId));
     return res.json(formatCampaign(updated!));
   } catch (err) {
@@ -183,6 +218,7 @@ function formatCampaign(row: campaignService.CampaignRow) {
     totalRaised: row.total_raised ?? "0",
     status: row.status ?? "Active",
     isVerified: row.is_verified ?? false,
+    category: row.category ?? null,
     createdAt: row.created_at,
   };
 }
