@@ -6,6 +6,7 @@ import { CampaignDetail } from './pages/CampaignDetail'
 import { CampaignExplorePage } from './pages/CampaignExplore'
 import { Dashboard } from './pages/Dashboard'
 import { AdminDashboard } from './pages/AdminDashboard'
+import { CreatorProfile } from './pages/CreatorProfile'
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/campaigns/:id" element={<CampaignDetail />} />
+          <Route path="/creators/:wallet" element={<CreatorProfile />} />
         </Routes>
       </main>
     </BrowserRouter>

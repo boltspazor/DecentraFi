@@ -119,6 +119,19 @@ export async function connectDb(): Promise<void> {
     await client.query(
       `CREATE INDEX IF NOT EXISTS idx_supporter_nfts_wallet ON supporter_nfts(contributor_wallet)`
     );
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS creator_profiles (
+        wallet VARCHAR(42) PRIMARY KEY,
+        ens_name VARCHAR(255),
+        lens_handle VARCHAR(255),
+        ceramic_did VARCHAR(255),
+        is_verified BOOLEAN DEFAULT FALSE,
+        updated_at TIMESTAMPTZ DEFAULT NOW(),
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_creator_profiles_verified ON creator_profiles(is_verified);`);
   } finally {
     client.release();
   }

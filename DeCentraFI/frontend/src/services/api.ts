@@ -100,6 +100,47 @@ export interface GlobalAnalytics {
   averageContributionWei: string;
 }
 
+export interface CreatorProfile {
+  wallet: string;
+  ensName: string | null;
+  lensHandle: string | null;
+  ceramicDid: string | null;
+  isVerified: boolean;
+  trustScore: number;
+  successfulCampaigns: number;
+  failedCampaigns: number;
+}
+
+export interface CreatorHistoryItem {
+  id: number;
+  title: string;
+  status: string;
+  totalRaised: string;
+  goal: string;
+  deadline: string;
+  createdAt: string;
+  campaignAddress: string;
+  isVerified: boolean;
+}
+
+export async function getCreatorProfile(wallet: string): Promise<CreatorProfile> {
+  const res = await fetch(`${API_BASE}/api/creators/${wallet}`);
+  if (!res.ok) {
+    const text = await res.text();
+    throw new ApiError(text || "Failed to load creator profile", res.status);
+  }
+  return (await res.json()) as CreatorProfile;
+}
+
+export async function getCreatorHistory(wallet: string): Promise<{ wallet: string; campaigns: CreatorHistoryItem[] }> {
+  const res = await fetch(`${API_BASE}/api/creators/${wallet}/history`);
+  if (!res.ok) {
+    const text = await res.text();
+    throw new ApiError(text || "Failed to load creator history", res.status);
+  }
+  return (await res.json()) as { wallet: string; campaigns: CreatorHistoryItem[] };
+}
+
 export async function createCampaign(data: {
   title: string;
   description: string;
