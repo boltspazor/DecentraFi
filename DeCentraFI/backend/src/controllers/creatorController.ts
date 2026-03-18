@@ -5,6 +5,31 @@ import * as campaignService from "../services/campaignService.js";
 const ADMIN_WALLET = process.env.ADMIN_WALLET?.toLowerCase();
 const ETH_ADDRESS_REGEX = /^0x[a-fA-F0-9]{40}$/;
 
+function normalizeOptionalString(v: unknown): string | null {
+  if (v == null) return null;
+  if (typeof v !== "string") return null;
+  const s = v.trim();
+  return s ? s : null;
+}
+
+function isValidEnsName(name: string): boolean {
+  // Minimal sanity: allow typical ENS names, don’t enforce resolution here.
+  if (name.length > 255) return false;
+  return /^[a-z0-9-]+(\.[a-z0-9-]+)+$/i.test(name);
+}
+
+function isValidLensHandle(handle: string): boolean {
+  if (handle.length > 255) return false;
+  // lens handles often like "alice.lens" or "alice". Keep permissive.
+  return /^[a-z0-9_.-]{1,255}$/i.test(handle);
+}
+
+function isValidCeramicDid(did: string): boolean {
+  if (did.length > 255) return false;
+  // Common forms: did:3:..., did:key:..., did:pkh:eip155:...
+  return /^did:[a-z0-9]+:[A-Za-z0-9.\-_:]+$/.test(did);
+}
+
 function normalizeWallet(raw: string): string | null {
   const w = raw.trim();
   if (!ETH_ADDRESS_REGEX.test(w)) return null;
@@ -47,11 +72,25 @@ export async function upsertCreatorProfile(req: Request, res: Response) {
       ceramicDid?: string | null;
     };
 
+    const ensName = normalizeOptionalString(body.ensName);
+    const lensHandle = normalizeOptionalString(body.lensHandle);
+    const ceramicDid = normalizeOptionalString(body.ceramicDid);
+
+    if (ensName && !isValidEnsName(ensName)) {
+      return res.status(400).json({ error: "Invalid ENS name format" });
+    }
+    if (lensHandle && !isValidLensHandle(lensHandle)) {
+      return res.status(400).json({ error: "Invalid Lens handle format" });
+    }
+    if (ceramicDid && !isValidCeramicDid(ceramicDid)) {
+      return res.status(400).json({ error: "Invalid Ceramic DID format" });
+    }
+
     const row = await creatorProfileService.upsertProfile({
       wallet,
-      ensName: body.ensName ?? null,
-      lensHandle: body.lensHandle ?? null,
-      ceramicDid: body.ceramicDid ?? null,
+      ensName,
+      lensHandle,
+      ceramicDid,
     });
 
     return res.json({
