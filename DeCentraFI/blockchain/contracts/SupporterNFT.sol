@@ -37,7 +37,7 @@ contract SupporterNFT is ERC721URIStorage, Ownable {
 
     event NFTMinted(address indexed contributor, uint256 indexed tokenId, Level level);
 
-    constructor(string memory name_, string memory symbol_) ERC721(name_, symbol_) Ownable(msg.sender) {}
+    constructor(string memory name_, string memory symbol_) ERC721(name_, symbol_) {}
 
     /**
      * @notice Compute level for a given total contribution amount.

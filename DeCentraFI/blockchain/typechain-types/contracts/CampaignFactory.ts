@@ -25,7 +25,12 @@ import type {
 
 export interface CampaignFactoryInterface extends Interface {
   getFunction(
-    nameOrSignature: "admin" | "campaigns" | "createCampaign" | "getCampaigns"
+    nameOrSignature:
+      | "admin"
+      | "campaigns"
+      | "createCampaign"
+      | "getCampaigns"
+      | "setAdmin"
   ): FunctionFragment;
 
   getEvent(nameOrSignatureOrTopic: "CampaignCreated"): EventFragment;
@@ -43,6 +48,10 @@ export interface CampaignFactoryInterface extends Interface {
     functionFragment: "getCampaigns",
     values?: undefined
   ): string;
+  encodeFunctionData(
+    functionFragment: "setAdmin",
+    values: [AddressLike]
+  ): string;
 
   decodeFunctionResult(functionFragment: "admin", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "campaigns", data: BytesLike): Result;
@@ -54,6 +63,7 @@ export interface CampaignFactoryInterface extends Interface {
     functionFragment: "getCampaigns",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "setAdmin", data: BytesLike): Result;
 }
 
 export namespace CampaignCreatedEvent {
@@ -136,6 +146,8 @@ export interface CampaignFactory extends BaseContract {
 
   getCampaigns: TypedContractMethod<[], [string[]], "view">;
 
+  setAdmin: TypedContractMethod<[newAdmin: AddressLike], [void], "nonpayable">;
+
   getFunction<T extends ContractMethod = ContractMethod>(
     key: string | FunctionFragment
   ): T;
@@ -156,6 +168,9 @@ export interface CampaignFactory extends BaseContract {
   getFunction(
     nameOrSignature: "getCampaigns"
   ): TypedContractMethod<[], [string[]], "view">;
+  getFunction(
+    nameOrSignature: "setAdmin"
+  ): TypedContractMethod<[newAdmin: AddressLike], [void], "nonpayable">;
 
   getEvent(
     key: "CampaignCreated"

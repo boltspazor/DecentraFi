@@ -9,7 +9,7 @@ describe("CampaignFactory", function () {
   beforeEach(async function () {
     [owner] = await ethers.getSigners();
     const CampaignFactory = await ethers.getContractFactory("CampaignFactory");
-    factory = await CampaignFactory.deploy();
+    factory = await CampaignFactory.deploy(owner.address);
     await factory.waitForDeployment();
     deadlineOffset = 60 * 60 * 24 * 7; // 7 days
   });

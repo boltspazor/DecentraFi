@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 /**
  * Campaign escrow: contributions locked until deadline.
@@ -92,6 +92,7 @@ contract Campaign is ReentrancyGuard {
         _;
     }
 
+
     constructor(address _creator, uint256 _goal, uint256 _deadline, address _admin) {
         creator = _creator;
         admin = _admin;
@@ -155,6 +156,21 @@ contract Campaign is ReentrancyGuard {
     /// @notice After deadline, if goal was met, only creator can release full balance. Funds stay in escrow until deadline.
     function releaseFunds() external nonReentrant {
         if (msg.sender != creator) revert NotCreator();
+        if (block.timestamp < deadline) revert DeadlineNotReached();
+        if (!closed) revert GoalNotReached();
+        if (fundsWithdrawn || fundsReleased) revert AlreadyWithdrawn();
+        uint256 amount = address(this).balance;
+        fundsWithdrawn = true;
+        fundsReleased = true;
+        (bool ok,) = payable(creator).call{value: amount}("");
+        if (!ok) revert TransferFailed();
+        emit Withdrawal(creator, amount);
+        emit FundsReleased(creator, amount);
+    }
+
+    /// @notice DAO-controlled fund release after deadline when goal met.
+    /// Timelock/Governor can execute this as a proposal to release escrow to the creator.
+    function daoReleaseFunds() external nonReentrant onlyAdmin {
         if (block.timestamp < deadline) revert DeadlineNotReached();
         if (!closed) revert GoalNotReached();
         if (fundsWithdrawn || fundsReleased) revert AlreadyWithdrawn();
@@ -248,6 +264,35 @@ contract Campaign is ReentrancyGuard {
         if (m.released) revert MilestoneAlreadyReleased();
 
         // Require simple majority by contribution weight.
+        if (milestoneApprovalWeight[milestoneId] * 2 < totalContributed) {
+            revert MilestoneNotApproved();
+        }
+
+        uint256 targetTotal = (totalRaised * m.percentage) / 100;
+        if (targetTotal <= totalMilestoneReleased) revert NoFundsToRelease();
+        uint256 amount = targetTotal - totalMilestoneReleased;
+        totalMilestoneReleased = targetTotal;
+        m.released = true;
+
+        (bool ok,) = payable(creator).call{value: amount}("");
+        if (!ok) revert TransferFailed();
+        emit MilestoneFundsReleased(milestoneId, amount);
+
+        if (totalMilestoneReleased >= totalRaised) {
+            fundsReleased = true;
+            fundsWithdrawn = true;
+        }
+    }
+
+    /// @notice DAO-controlled milestone release. Same checks as creator release, but callable by admin.
+    function daoReleaseMilestoneFunds(uint256 milestoneId) external nonReentrant onlyAdmin {
+        if (milestoneId >= milestones.length) revert InvalidMilestoneId();
+        if (block.timestamp < deadline) revert DeadlineNotReached();
+        if (!closed) revert GoalNotReached();
+
+        Milestone storage m = milestones[milestoneId];
+        if (m.released) revert MilestoneAlreadyReleased();
+
         if (milestoneApprovalWeight[milestoneId] * 2 < totalContributed) {
             revert MilestoneNotApproved();
         }

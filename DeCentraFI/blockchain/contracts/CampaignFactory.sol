@@ -12,8 +12,8 @@ contract CampaignFactory {
 
     event CampaignCreated(address indexed campaign, address indexed creator, uint256 goal, uint256 deadline);
 
-    constructor() {
-        admin = msg.sender;
+    constructor(address _admin) {
+        admin = _admin == address(0) ? msg.sender : _admin;
     }
 
     function createCampaign(uint256 _goal, uint256 _deadline) external returns (address) {
@@ -23,6 +23,13 @@ contract CampaignFactory {
         campaigns.push(campaign);
         emit CampaignCreated(address(campaign), msg.sender, _goal, _deadline);
         return address(campaign);
+    }
+
+    /// @notice Update factory admin (e.g. transfer to DAO timelock).
+    function setAdmin(address newAdmin) external {
+        require(msg.sender == admin, "Not admin");
+        require(newAdmin != address(0), "Zero admin");
+        admin = newAdmin;
     }
 
     function getCampaigns() external view returns (address[] memory) {

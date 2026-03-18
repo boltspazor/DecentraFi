@@ -19,7 +19,7 @@ describe("Campaign", function () {
   beforeEach(async function () {
     [owner, contributor1, contributor2] = await ethers.getSigners();
     const CampaignFactory = await ethers.getContractFactory("CampaignFactory");
-    factory = await CampaignFactory.deploy();
+    factory = await CampaignFactory.deploy(owner.address);
     await factory.waitForDeployment();
     const deadline = (await ethers.provider.getBlock("latest")).timestamp + deadlineOffset;
     await factory.createCampaign(goal, deadline);
@@ -380,7 +380,7 @@ describe("Campaign", function () {
     // So use only contributor2 (4 ETH) so 4 * 2 = 8 < 10.
     const campaign2Goal = ethers.parseEther("10");
     const CampaignFactory = await ethers.getContractFactory("CampaignFactory");
-    const factory2 = await CampaignFactory.deploy();
+    const factory2 = await CampaignFactory.deploy(owner.address);
     await factory2.waitForDeployment();
     const deadline2 = (await ethers.provider.getBlock("latest")).timestamp + deadlineOffset;
     await factory2.createCampaign(campaign2Goal, deadline2);

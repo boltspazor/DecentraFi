@@ -66,7 +66,7 @@ describe("SupporterNFT", function () {
     const amount = ethers.parseEther("0.5");
     await expect(
       nft.connect(other).mintSupporterNFT(other.address, amount, "ipfs://silver")
-    ).to.be.revertedWithCustomError(nft, "OwnableUnauthorizedAccount");
+    ).to.be.revertedWith("Ownable: caller is not the owner");
   });
 });
 

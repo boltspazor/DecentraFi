@@ -3,4 +3,8 @@
 /* eslint-disable */
 export type { Campaign } from "./Campaign";
 export type { CampaignFactory } from "./CampaignFactory";
+export type { DecentraFiGovernanceToken } from "./DecentraFiGovernanceToken";
+export type { DecentraFiGovernor } from "./DecentraFiGovernor";
+export type { DecentraFiTimelock } from "./DecentraFiTimelock";
+export type { PlatformConfig } from "./PlatformConfig";
 export type { SupporterNFT } from "./SupporterNFT";

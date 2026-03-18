@@ -34,6 +34,8 @@ export interface CampaignInterface extends Interface {
       | "contributions"
       | "createProposal"
       | "creator"
+      | "daoReleaseFunds"
+      | "daoReleaseMilestoneFunds"
       | "deadline"
       | "executeProposal"
       | "finalizeAfterDeadline"
@@ -109,6 +111,14 @@ export interface CampaignInterface extends Interface {
     values: [string]
   ): string;
   encodeFunctionData(functionFragment: "creator", values?: undefined): string;
+  encodeFunctionData(
+    functionFragment: "daoReleaseFunds",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "daoReleaseMilestoneFunds",
+    values: [BigNumberish]
+  ): string;
   encodeFunctionData(functionFragment: "deadline", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "executeProposal",
@@ -238,6 +248,14 @@ export interface CampaignInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "creator", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "daoReleaseFunds",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "daoReleaseMilestoneFunds",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "deadline", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "executeProposal",
@@ -625,6 +643,14 @@ export interface Campaign extends BaseContract {
 
   creator: TypedContractMethod<[], [string], "view">;
 
+  daoReleaseFunds: TypedContractMethod<[], [void], "nonpayable">;
+
+  daoReleaseMilestoneFunds: TypedContractMethod<
+    [milestoneId: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+
   deadline: TypedContractMethod<[], [bigint], "view">;
 
   executeProposal: TypedContractMethod<
@@ -755,6 +781,12 @@ export interface Campaign extends BaseContract {
   getFunction(
     nameOrSignature: "creator"
   ): TypedContractMethod<[], [string], "view">;
+  getFunction(
+    nameOrSignature: "daoReleaseFunds"
+  ): TypedContractMethod<[], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "daoReleaseMilestoneFunds"
+  ): TypedContractMethod<[milestoneId: BigNumberish], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "deadline"
   ): TypedContractMethod<[], [bigint], "view">;
