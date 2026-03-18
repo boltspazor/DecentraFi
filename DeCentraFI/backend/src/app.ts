@@ -5,6 +5,7 @@ import contributionRoutes from './routes/contributionRoutes.js'
 import userRoutes from './routes/userRoutes.js'
 import analyticsRoutes from './routes/analyticsRoutes.js'
 import recommendationRoutes from './routes/recommendationRoutes.js'
+import qfRoutes from './routes/qfRoutes.js'
 import { pool } from './config/db.js'
 
 const app = express()
@@ -35,5 +36,6 @@ app.use('/api/contributions', contributionRoutes)
 app.use('/api/user', userRoutes)
 app.use('/api/analytics', analyticsRoutes)
 app.use('/api/recommendations', recommendationRoutes)
+app.use('/api/qf', qfRoutes)
 
 export default app
