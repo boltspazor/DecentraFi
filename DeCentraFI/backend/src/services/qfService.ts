@@ -8,7 +8,13 @@ export interface QfCampaignAllocation {
   matchingAllocationWei: string;
 }
 
-function isqrt(n: bigint): bigint {
+export type QfContributionAggregate = {
+  campaignId: number;
+  contributorAddress: string;
+  amountWei: string;
+};
+
+export function isqrt(n: bigint): bigint {
   if (n < 0n) throw new Error("isqrt: negative");
   if (n < 2n) return n;
   // Newton iteration
@@ -25,30 +31,22 @@ function clampNonNegBigint(v: bigint): bigint {
   return v < 0n ? 0n : v;
 }
 
-export async function getQfAllocations(matchingPoolWei: bigint): Promise<{
+export function computeQfAllocationsFromAggregates(
+  aggregates: QfContributionAggregate[],
+  matchingPoolWei: bigint
+): {
   matchingPoolWei: string;
   totalScoreWei: string;
   allocations: QfCampaignAllocation[];
-}> {
-  const result = await pool.query(
-    `
-    SELECT
-      campaign_id,
-      contributor_address,
-      SUM(amount_wei::numeric)::text AS amount_wei
-    FROM contributions
-    GROUP BY campaign_id, contributor_address
-    `
-  );
-
+} {
   const perCampaign = new Map<
     number,
     { contributorCount: number; totalContributed: bigint; sumSqrt: bigint }
   >();
 
-  for (const row of result.rows as { campaign_id: number; contributor_address: string; amount_wei: string }[]) {
-    const campaignId = row.campaign_id;
-    const amt = BigInt(row.amount_wei);
+  for (const row of aggregates) {
+    const campaignId = row.campaignId;
+    const amt = BigInt(row.amountWei);
     const entry = perCampaign.get(campaignId) ?? { contributorCount: 0, totalContributed: 0n, sumSqrt: 0n };
     entry.contributorCount += 1;
     entry.totalContributed += amt;
@@ -77,7 +75,7 @@ export async function getQfAllocations(matchingPoolWei: bigint): Promise<{
 
   const poolWei = clampNonNegBigint(matchingPoolWei);
   const allocations: QfCampaignAllocation[] = scored
-    .sort((a, b) => b.score === a.score ? b.totalContributed > a.totalContributed ? 1 : -1 : b.score > a.score ? 1 : -1)
+    .sort((a, b) => (b.score === a.score ? (b.totalContributed > a.totalContributed ? 1 : -1) : b.score > a.score ? 1 : -1))
     .map((c) => {
       const alloc = totalScore > 0n ? (poolWei * c.score) / totalScore : 0n;
       return {
@@ -94,6 +92,32 @@ export async function getQfAllocations(matchingPoolWei: bigint): Promise<{
     totalScoreWei: totalScore.toString(),
     allocations,
   };
+}
+
+export async function getQfAllocations(matchingPoolWei: bigint): Promise<{
+  matchingPoolWei: string;
+  totalScoreWei: string;
+  allocations: QfCampaignAllocation[];
+}> {
+  const result = await pool.query(
+    `
+    SELECT
+      campaign_id,
+      contributor_address,
+      SUM(amount_wei::numeric)::text AS amount_wei
+    FROM contributions
+    GROUP BY campaign_id, contributor_address
+    `
+  );
+
+  const aggregates: QfContributionAggregate[] = (result.rows as { campaign_id: number; contributor_address: string; amount_wei: string }[])
+    .map((r) => ({
+      campaignId: r.campaign_id,
+      contributorAddress: r.contributor_address,
+      amountWei: r.amount_wei,
+    }));
+
+  return computeQfAllocationsFromAggregates(aggregates, matchingPoolWei);
 }
 
 export async function getQfImpactForCampaign(campaignId: number, matchingPoolWei: bigint) {
