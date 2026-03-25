@@ -9,5 +9,6 @@ export { CampaignFactory__factory } from "./CampaignFactory__factory";
 export { DecentraFiGovernanceToken__factory } from "./DecentraFiGovernanceToken__factory";
 export { DecentraFiGovernor__factory } from "./DecentraFiGovernor__factory";
 export { DecentraFiTimelock__factory } from "./DecentraFiTimelock__factory";
+export { MockSemaphoreVerifier__factory } from "./MockSemaphoreVerifier__factory";
 export { PlatformConfig__factory } from "./PlatformConfig__factory";
 export { SupporterNFT__factory } from "./SupporterNFT__factory";

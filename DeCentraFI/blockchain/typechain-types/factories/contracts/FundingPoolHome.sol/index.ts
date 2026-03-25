@@ -3,3 +3,4 @@
 /* eslint-disable */
 export { FundingPoolHome__factory } from "./FundingPoolHome__factory";
 export { ILayerZeroEndpoint__factory } from "./ILayerZeroEndpoint__factory";
+export { ISemaphore__factory } from "./ISemaphore__factory";

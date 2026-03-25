@@ -15,6 +15,22 @@ interface ILayerZeroEndpoint {
     ) external payable;
 }
 
+// Minimal Semaphore interface (v4-style).
+// This is deliberately small so the repo can use real Semaphore later without coupling
+// this contract to a specific npm package version.
+interface ISemaphore {
+    struct SemaphoreProof {
+        uint256 merkleTreeDepth;
+        uint256 merkleTreeRoot;
+        uint256 nullifier;
+        uint256 message;
+        uint256 scope;
+        uint256[8] points;
+    }
+
+    function verifyProof(uint256 groupId, SemaphoreProof calldata proof) external view returns (bool);
+}
+
 /**
  * @title FundingPoolHome
  * @notice Option A: single "home" pool that receives deposits from remote chains via LayerZero.
@@ -28,6 +44,11 @@ interface ILayerZeroEndpoint {
 contract FundingPoolHome is ReentrancyGuard {
     address public immutable endpoint;
     address public owner;
+
+    // ---- Semaphore (anonymous donations) ----
+    ISemaphore public semaphoreVerifier;
+    uint256 public semaphoreGroupId;
+    bool public semaphoreConfigured;
 
     // srcChainId => srcAddress bytes (gateway address encoded as bytes in LZ payload/path)
     mapping(uint16 => bytes) public trustedRemoteLookup;
@@ -55,6 +76,13 @@ contract FundingPoolHome is ReentrancyGuard {
         trustedRemoteLookup[srcChainId] = srcAddress;
     }
 
+    function setSemaphore(address _semaphoreVerifier, uint256 _groupId) external onlyOwner {
+        require(_semaphoreVerifier != address(0), "Zero verifier");
+        semaphoreVerifier = ISemaphore(_semaphoreVerifier);
+        semaphoreGroupId = _groupId;
+        semaphoreConfigured = true;
+    }
+
     // ---- Campaign state ----
     struct Campaign {
         address creator;
@@ -75,6 +103,10 @@ contract FundingPoolHome is ReentrancyGuard {
 
     // campaignId => contributor => amount
     mapping(uint256 => mapping(address => uint256)) public contributions;
+    // campaignId => nullifier => amount (anonymous donation accounting)
+    mapping(uint256 => mapping(uint256 => uint256)) public anonymousContributions;
+    // campaignId => nullifier => used (prevents duplicate anonymous deposits)
+    mapping(uint256 => mapping(uint256 => bool)) public anonymousNullifierUsed;
     // campaignId => escrow held for this campaign
     mapping(uint256 => uint256) public escrowBalance;
 
@@ -96,6 +128,8 @@ contract FundingPoolHome is ReentrancyGuard {
     );
     event ContributionReceived(address indexed contributor, uint256 amount, uint256 indexed campaignId, uint256 originChainId);
     event RefundClaimed(address indexed contributor, uint256 amount, uint256 indexed campaignId);
+    event AnonymousContributionReceived(uint256 indexed campaignId, uint256 indexed nullifier, uint256 amount, uint256 originChainId);
+    event AnonymousRefundClaimed(uint256 indexed campaignId, uint256 indexed nullifier, uint256 amount);
 
     event StreamStarted(
         address indexed creator,
@@ -134,6 +168,9 @@ contract FundingPoolHome is ReentrancyGuard {
     error CampaignNotFound();
     error GoalNotReached();
     error DuplicateDeposit();
+    error SemaphoreNotConfigured();
+    error InvalidSemaphoreProof();
+    error DuplicateAnonNullifier();
 
     // ---- Campaign lifecycle: create + local contribute ----
     function createCampaign(uint256 goalWei, uint256 deadline) external returns (uint256 campaignId) {
@@ -174,6 +211,41 @@ contract FundingPoolHome is ReentrancyGuard {
 
         escrowBalance[campaignId] += msg.value;
         emit ContributionReceived(msg.sender, msg.value, campaignId, block.chainid);
+    }
+
+    function contributeAnon(
+        uint256 campaignId,
+        uint256 amountWei,
+        ISemaphore.SemaphoreProof calldata proof
+    ) external payable nonReentrant {
+        if (!semaphoreConfigured) revert SemaphoreNotConfigured();
+
+        Campaign storage c = campaigns[campaignId];
+        if (!c.exists) revert CampaignNotFound();
+        if (amountWei == 0) revert NoContribution();
+        if (block.timestamp >= c.deadline) revert CampaignEnded();
+        if (c.closed) revert GoalReached();
+        require(msg.value == amountWei, "Mismatched msg.value");
+
+        // Nullifier is public in Semaphore proofs; we store it to prevent duplicates.
+        uint256 nullifier = proof.nullifier;
+        if (anonymousNullifierUsed[campaignId][nullifier]) revert DuplicateAnonNullifier();
+
+        bool ok = semaphoreVerifier.verifyProof(semaphoreGroupId, proof);
+        if (!ok) revert InvalidSemaphoreProof();
+
+        // Mark nullifier used before mutating accounting to reduce reentrancy surface.
+        anonymousNullifierUsed[campaignId][nullifier] = true;
+        anonymousContributions[campaignId][nullifier] += amountWei;
+
+        c.totalContributed += amountWei;
+        c.totalRaised = c.totalContributed;
+        if (c.totalContributed >= c.goal) {
+            c.closed = true;
+        }
+
+        escrowBalance[campaignId] += amountWei;
+        emit AnonymousContributionReceived(campaignId, nullifier, amountWei, block.chainid);
     }
 
     // helper: isolate accounting logic and allow lzReceive to reuse
@@ -377,6 +449,31 @@ contract FundingPoolHome is ReentrancyGuard {
         if (!ok) revert TransferFailed();
 
         emit RefundClaimed(msg.sender, amount, campaignId);
+    }
+
+    function claimRefundAnon(uint256 campaignId, ISemaphore.SemaphoreProof calldata proof) external nonReentrant {
+        if (!semaphoreConfigured) revert SemaphoreNotConfigured();
+
+        Campaign storage c = campaigns[campaignId];
+        if (!c.exists) revert CampaignNotFound();
+        if (!c.refundEnabled) revert RefundNotEnabled();
+
+        bool ok = semaphoreVerifier.verifyProof(semaphoreGroupId, proof);
+        if (!ok) revert InvalidSemaphoreProof();
+
+        uint256 nullifier = proof.nullifier;
+        uint256 amount = anonymousContributions[campaignId][nullifier];
+        if (amount == 0) revert NoContribution();
+
+        anonymousContributions[campaignId][nullifier] = 0;
+        c.totalContributed -= amount;
+        c.totalRaised = c.totalContributed;
+        escrowBalance[campaignId] -= amount;
+
+        (bool sent,) = payable(msg.sender).call{value: amount}("");
+        if (!sent) revert TransferFailed();
+
+        emit AnonymousRefundClaimed(campaignId, nullifier, amount);
     }
 
     // ---- Owner convenience for tests/UX (optional admin start) ----

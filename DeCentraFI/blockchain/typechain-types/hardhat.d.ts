@@ -182,6 +182,10 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.ILayerZeroEndpoint__factory>;
     getContractFactory(
+      name: "ISemaphore",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.ISemaphore__factory>;
+    getContractFactory(
       name: "ILzReceiver",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.ILzReceiver__factory>;
@@ -189,6 +193,10 @@ declare module "hardhat/types/runtime" {
       name: "MockLayerZeroEndpoint",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.MockLayerZeroEndpoint__factory>;
+    getContractFactory(
+      name: "MockSemaphoreVerifier",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.MockSemaphoreVerifier__factory>;
     getContractFactory(
       name: "PlatformConfig",
       signerOrOptions?: ethers.Signer | FactoryOptions
@@ -409,6 +417,11 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.ILayerZeroEndpoint>;
     getContractAt(
+      name: "ISemaphore",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.ISemaphore>;
+    getContractAt(
       name: "ILzReceiver",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
@@ -418,6 +431,11 @@ declare module "hardhat/types/runtime" {
       address: string | ethers.Addressable,
       signer?: ethers.Signer
     ): Promise<Contracts.MockLayerZeroEndpoint>;
+    getContractAt(
+      name: "MockSemaphoreVerifier",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.MockSemaphoreVerifier>;
     getContractAt(
       name: "PlatformConfig",
       address: string | ethers.Addressable,
@@ -598,6 +616,10 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.ILayerZeroEndpoint>;
     deployContract(
+      name: "ISemaphore",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.ISemaphore>;
+    deployContract(
       name: "ILzReceiver",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.ILzReceiver>;
@@ -605,6 +627,10 @@ declare module "hardhat/types/runtime" {
       name: "MockLayerZeroEndpoint",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.MockLayerZeroEndpoint>;
+    deployContract(
+      name: "MockSemaphoreVerifier",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.MockSemaphoreVerifier>;
     deployContract(
       name: "PlatformConfig",
       signerOrOptions?: ethers.Signer | DeployContractOptions
@@ -825,6 +851,11 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.ILayerZeroEndpoint>;
     deployContract(
+      name: "ISemaphore",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.ISemaphore>;
+    deployContract(
       name: "ILzReceiver",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
@@ -834,6 +865,11 @@ declare module "hardhat/types/runtime" {
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.MockLayerZeroEndpoint>;
+    deployContract(
+      name: "MockSemaphoreVerifier",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.MockSemaphoreVerifier>;
     deployContract(
       name: "PlatformConfig",
       args: any[],

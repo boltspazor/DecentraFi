@@ -88,10 +88,14 @@ export type { ILayerZeroEndpoint } from "./contracts/FundingGateway.sol/ILayerZe
 export { ILayerZeroEndpoint__factory } from "./factories/contracts/FundingGateway.sol/ILayerZeroEndpoint__factory";
 export type { FundingPoolHome } from "./contracts/FundingPoolHome.sol/FundingPoolHome";
 export { FundingPoolHome__factory } from "./factories/contracts/FundingPoolHome.sol/FundingPoolHome__factory";
+export type { ISemaphore } from "./contracts/FundingPoolHome.sol/ISemaphore";
+export { ISemaphore__factory } from "./factories/contracts/FundingPoolHome.sol/ISemaphore__factory";
 export type { ILzReceiver } from "./contracts/MockLayerZeroEndpoint.sol/ILzReceiver";
 export { ILzReceiver__factory } from "./factories/contracts/MockLayerZeroEndpoint.sol/ILzReceiver__factory";
 export type { MockLayerZeroEndpoint } from "./contracts/MockLayerZeroEndpoint.sol/MockLayerZeroEndpoint";
 export { MockLayerZeroEndpoint__factory } from "./factories/contracts/MockLayerZeroEndpoint.sol/MockLayerZeroEndpoint__factory";
+export type { MockSemaphoreVerifier } from "./contracts/MockSemaphoreVerifier";
+export { MockSemaphoreVerifier__factory } from "./factories/contracts/MockSemaphoreVerifier__factory";
 export type { PlatformConfig } from "./contracts/PlatformConfig";
 export { PlatformConfig__factory } from "./factories/contracts/PlatformConfig__factory";
 export type { SupporterNFT } from "./contracts/SupporterNFT";

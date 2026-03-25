@@ -23,13 +23,44 @@ import type {
   TypedContractMethod,
 } from "../../common";
 
+export declare namespace ISemaphore {
+  export type SemaphoreProofStruct = {
+    merkleTreeDepth: BigNumberish;
+    merkleTreeRoot: BigNumberish;
+    nullifier: BigNumberish;
+    message: BigNumberish;
+    scope: BigNumberish;
+    points: BigNumberish[];
+  };
+
+  export type SemaphoreProofStructOutput = [
+    merkleTreeDepth: bigint,
+    merkleTreeRoot: bigint,
+    nullifier: bigint,
+    message: bigint,
+    scope: bigint,
+    points: bigint[]
+  ] & {
+    merkleTreeDepth: bigint;
+    merkleTreeRoot: bigint;
+    nullifier: bigint;
+    message: bigint;
+    scope: bigint;
+    points: bigint[];
+  };
+}
+
 export interface FundingPoolHomeInterface extends Interface {
   getFunction(
     nameOrSignature:
       | "DEFAULT_STREAM_DURATION_SECONDS"
+      | "anonymousContributions"
+      | "anonymousNullifierUsed"
       | "campaigns"
       | "claimRefund"
+      | "claimRefundAnon"
       | "contribute"
+      | "contributeAnon"
       | "contributions"
       | "createCampaign"
       | "daoStartStreaming"
@@ -41,6 +72,10 @@ export interface FundingPoolHomeInterface extends Interface {
       | "owner"
       | "processedNonces"
       | "releaseFunds"
+      | "semaphoreConfigured"
+      | "semaphoreGroupId"
+      | "semaphoreVerifier"
+      | "setSemaphore"
       | "setTrustedRemote"
       | "startStreaming"
       | "stopStream"
@@ -58,6 +93,8 @@ export interface FundingPoolHomeInterface extends Interface {
 
   getEvent(
     nameOrSignatureOrTopic:
+      | "AnonymousContributionReceived"
+      | "AnonymousRefundClaimed"
       | "CampaignCreated"
       | "ContributionReceived"
       | "FundsReleased"
@@ -72,6 +109,14 @@ export interface FundingPoolHomeInterface extends Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
+    functionFragment: "anonymousContributions",
+    values: [BigNumberish, BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "anonymousNullifierUsed",
+    values: [BigNumberish, BigNumberish]
+  ): string;
+  encodeFunctionData(
     functionFragment: "campaigns",
     values: [BigNumberish]
   ): string;
@@ -80,8 +125,16 @@ export interface FundingPoolHomeInterface extends Interface {
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
+    functionFragment: "claimRefundAnon",
+    values: [BigNumberish, ISemaphore.SemaphoreProofStruct]
+  ): string;
+  encodeFunctionData(
     functionFragment: "contribute",
     values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "contributeAnon",
+    values: [BigNumberish, BigNumberish, ISemaphore.SemaphoreProofStruct]
   ): string;
   encodeFunctionData(
     functionFragment: "contributions",
@@ -120,6 +173,22 @@ export interface FundingPoolHomeInterface extends Interface {
   encodeFunctionData(
     functionFragment: "releaseFunds",
     values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "semaphoreConfigured",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "semaphoreGroupId",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "semaphoreVerifier",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "setSemaphore",
+    values: [AddressLike, BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "setTrustedRemote",
@@ -178,12 +247,28 @@ export interface FundingPoolHomeInterface extends Interface {
     functionFragment: "DEFAULT_STREAM_DURATION_SECONDS",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(
+    functionFragment: "anonymousContributions",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "anonymousNullifierUsed",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "campaigns", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "claimRefund",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(
+    functionFragment: "claimRefundAnon",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "contribute", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "contributeAnon",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(
     functionFragment: "contributions",
     data: BytesLike
@@ -217,6 +302,22 @@ export interface FundingPoolHomeInterface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "releaseFunds",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "semaphoreConfigured",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "semaphoreGroupId",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "semaphoreVerifier",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "setSemaphore",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -268,6 +369,53 @@ export interface FundingPoolHomeInterface extends Interface {
     functionFragment: "withdrawFromStream",
     data: BytesLike
   ): Result;
+}
+
+export namespace AnonymousContributionReceivedEvent {
+  export type InputTuple = [
+    campaignId: BigNumberish,
+    nullifier: BigNumberish,
+    amount: BigNumberish,
+    originChainId: BigNumberish
+  ];
+  export type OutputTuple = [
+    campaignId: bigint,
+    nullifier: bigint,
+    amount: bigint,
+    originChainId: bigint
+  ];
+  export interface OutputObject {
+    campaignId: bigint;
+    nullifier: bigint;
+    amount: bigint;
+    originChainId: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace AnonymousRefundClaimedEvent {
+  export type InputTuple = [
+    campaignId: BigNumberish,
+    nullifier: BigNumberish,
+    amount: BigNumberish
+  ];
+  export type OutputTuple = [
+    campaignId: bigint,
+    nullifier: bigint,
+    amount: bigint
+  ];
+  export interface OutputObject {
+    campaignId: bigint;
+    nullifier: bigint;
+    amount: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
 }
 
 export namespace CampaignCreatedEvent {
@@ -493,6 +641,18 @@ export interface FundingPoolHome extends BaseContract {
 
   DEFAULT_STREAM_DURATION_SECONDS: TypedContractMethod<[], [bigint], "view">;
 
+  anonymousContributions: TypedContractMethod<
+    [arg0: BigNumberish, arg1: BigNumberish],
+    [bigint],
+    "view"
+  >;
+
+  anonymousNullifierUsed: TypedContractMethod<
+    [arg0: BigNumberish, arg1: BigNumberish],
+    [boolean],
+    "view"
+  >;
+
   campaigns: TypedContractMethod<
     [arg0: BigNumberish],
     [
@@ -531,8 +691,24 @@ export interface FundingPoolHome extends BaseContract {
     "nonpayable"
   >;
 
+  claimRefundAnon: TypedContractMethod<
+    [campaignId: BigNumberish, proof: ISemaphore.SemaphoreProofStruct],
+    [void],
+    "nonpayable"
+  >;
+
   contribute: TypedContractMethod<
     [campaignId: BigNumberish],
+    [void],
+    "payable"
+  >;
+
+  contributeAnon: TypedContractMethod<
+    [
+      campaignId: BigNumberish,
+      amountWei: BigNumberish,
+      proof: ISemaphore.SemaphoreProofStruct
+    ],
     [void],
     "payable"
   >;
@@ -588,6 +764,18 @@ export interface FundingPoolHome extends BaseContract {
 
   releaseFunds: TypedContractMethod<
     [campaignId: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+
+  semaphoreConfigured: TypedContractMethod<[], [boolean], "view">;
+
+  semaphoreGroupId: TypedContractMethod<[], [bigint], "view">;
+
+  semaphoreVerifier: TypedContractMethod<[], [string], "view">;
+
+  setSemaphore: TypedContractMethod<
+    [_semaphoreVerifier: AddressLike, _groupId: BigNumberish],
     [void],
     "nonpayable"
   >;
@@ -670,6 +858,20 @@ export interface FundingPoolHome extends BaseContract {
     nameOrSignature: "DEFAULT_STREAM_DURATION_SECONDS"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
+    nameOrSignature: "anonymousContributions"
+  ): TypedContractMethod<
+    [arg0: BigNumberish, arg1: BigNumberish],
+    [bigint],
+    "view"
+  >;
+  getFunction(
+    nameOrSignature: "anonymousNullifierUsed"
+  ): TypedContractMethod<
+    [arg0: BigNumberish, arg1: BigNumberish],
+    [boolean],
+    "view"
+  >;
+  getFunction(
     nameOrSignature: "campaigns"
   ): TypedContractMethod<
     [arg0: BigNumberish],
@@ -706,8 +908,26 @@ export interface FundingPoolHome extends BaseContract {
     nameOrSignature: "claimRefund"
   ): TypedContractMethod<[campaignId: BigNumberish], [void], "nonpayable">;
   getFunction(
+    nameOrSignature: "claimRefundAnon"
+  ): TypedContractMethod<
+    [campaignId: BigNumberish, proof: ISemaphore.SemaphoreProofStruct],
+    [void],
+    "nonpayable"
+  >;
+  getFunction(
     nameOrSignature: "contribute"
   ): TypedContractMethod<[campaignId: BigNumberish], [void], "payable">;
+  getFunction(
+    nameOrSignature: "contributeAnon"
+  ): TypedContractMethod<
+    [
+      campaignId: BigNumberish,
+      amountWei: BigNumberish,
+      proof: ISemaphore.SemaphoreProofStruct
+    ],
+    [void],
+    "payable"
+  >;
   getFunction(
     nameOrSignature: "contributions"
   ): TypedContractMethod<
@@ -767,6 +987,22 @@ export interface FundingPoolHome extends BaseContract {
     nameOrSignature: "releaseFunds"
   ): TypedContractMethod<[campaignId: BigNumberish], [void], "nonpayable">;
   getFunction(
+    nameOrSignature: "semaphoreConfigured"
+  ): TypedContractMethod<[], [boolean], "view">;
+  getFunction(
+    nameOrSignature: "semaphoreGroupId"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "semaphoreVerifier"
+  ): TypedContractMethod<[], [string], "view">;
+  getFunction(
+    nameOrSignature: "setSemaphore"
+  ): TypedContractMethod<
+    [_semaphoreVerifier: AddressLike, _groupId: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+  getFunction(
     nameOrSignature: "setTrustedRemote"
   ): TypedContractMethod<
     [srcChainId: BigNumberish, srcAddress: BytesLike],
@@ -814,6 +1050,20 @@ export interface FundingPoolHome extends BaseContract {
     nameOrSignature: "withdrawFromStream"
   ): TypedContractMethod<[campaignId: BigNumberish], [void], "nonpayable">;
 
+  getEvent(
+    key: "AnonymousContributionReceived"
+  ): TypedContractEvent<
+    AnonymousContributionReceivedEvent.InputTuple,
+    AnonymousContributionReceivedEvent.OutputTuple,
+    AnonymousContributionReceivedEvent.OutputObject
+  >;
+  getEvent(
+    key: "AnonymousRefundClaimed"
+  ): TypedContractEvent<
+    AnonymousRefundClaimedEvent.InputTuple,
+    AnonymousRefundClaimedEvent.OutputTuple,
+    AnonymousRefundClaimedEvent.OutputObject
+  >;
   getEvent(
     key: "CampaignCreated"
   ): TypedContractEvent<
@@ -865,6 +1115,28 @@ export interface FundingPoolHome extends BaseContract {
   >;
 
   filters: {
+    "AnonymousContributionReceived(uint256,uint256,uint256,uint256)": TypedContractEvent<
+      AnonymousContributionReceivedEvent.InputTuple,
+      AnonymousContributionReceivedEvent.OutputTuple,
+      AnonymousContributionReceivedEvent.OutputObject
+    >;
+    AnonymousContributionReceived: TypedContractEvent<
+      AnonymousContributionReceivedEvent.InputTuple,
+      AnonymousContributionReceivedEvent.OutputTuple,
+      AnonymousContributionReceivedEvent.OutputObject
+    >;
+
+    "AnonymousRefundClaimed(uint256,uint256,uint256)": TypedContractEvent<
+      AnonymousRefundClaimedEvent.InputTuple,
+      AnonymousRefundClaimedEvent.OutputTuple,
+      AnonymousRefundClaimedEvent.OutputObject
+    >;
+    AnonymousRefundClaimed: TypedContractEvent<
+      AnonymousRefundClaimedEvent.InputTuple,
+      AnonymousRefundClaimedEvent.OutputTuple,
+      AnonymousRefundClaimedEvent.OutputObject
+    >;
+
     "CampaignCreated(uint256,address,uint256,uint256)": TypedContractEvent<
       CampaignCreatedEvent.InputTuple,
       CampaignCreatedEvent.OutputTuple,

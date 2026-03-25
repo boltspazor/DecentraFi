@@ -12,5 +12,6 @@ export type { CampaignFactory } from "./CampaignFactory";
 export type { DecentraFiGovernanceToken } from "./DecentraFiGovernanceToken";
 export type { DecentraFiGovernor } from "./DecentraFiGovernor";
 export type { DecentraFiTimelock } from "./DecentraFiTimelock";
+export type { MockSemaphoreVerifier } from "./MockSemaphoreVerifier";
 export type { PlatformConfig } from "./PlatformConfig";
 export type { SupporterNFT } from "./SupporterNFT";

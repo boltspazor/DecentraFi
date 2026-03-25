@@ -6,10 +6,14 @@ describe("FundingPoolHome (multi-chain option A)", function () {
   let pool;
   let gateway1;
   let gateway2;
+  let semaphoreVerifier;
 
   let owner;
   let creator;
   let contributor;
+
+  const semaphoreGroupId = 55n;
+  const validSemaphoreMessage = 4242n;
 
   const srcChainId = 101; // mock remote chain id (LayerZero srcChainId)
   const srcChainId2 = 102;
@@ -49,6 +53,11 @@ describe("FundingPoolHome (multi-chain option A)", function () {
     await pool.connect(owner).setTrustedRemote(srcChainId, trustedSrcAddressBytes);
     await pool.connect(owner).setTrustedRemote(srcChainId2, trustedSrcAddressBytes2);
     nextNonce = 1;
+
+    const MockSemaphoreVerifier = await ethers.getContractFactory("MockSemaphoreVerifier");
+    semaphoreVerifier = await MockSemaphoreVerifier.deploy(semaphoreGroupId, validSemaphoreMessage);
+    await semaphoreVerifier.waitForDeployment();
+    await pool.connect(owner).setSemaphore(await semaphoreVerifier.getAddress(), semaphoreGroupId);
   });
 
   async function createGoalCampaign({ goalWei, deadlineOffsetSeconds }) {
@@ -58,6 +67,17 @@ describe("FundingPoolHome (multi-chain option A)", function () {
 
     await (await pool.connect(creator).createCampaign(goal, deadline)).wait();
     return nextId;
+  }
+
+  function makeProof({ nullifier, message }) {
+    return {
+      merkleTreeDepth: 20n,
+      merkleTreeRoot: 0n,
+      nullifier,
+      message,
+      scope: 0n,
+      points: [1n, 0n, 0n, 0n, 0n, 0n, 0n, 0n],
+    };
   }
 
   async function simulateCrossChainDeposit({
@@ -405,6 +425,111 @@ describe("FundingPoolHome (multi-chain option A)", function () {
         { value }
       )
     ).to.be.revertedWithCustomError(pool, "DuplicateDeposit");
+  });
+
+  it("accepts anonymous donations with valid Semaphore proof (and does not store contributor address)", async function () {
+    const goal = ethers.parseEther("10");
+    const campaignId = await createGoalCampaign({ goalWei: goal, deadlineOffsetSeconds: 100 });
+
+    const amount = ethers.parseEther("6");
+    const nullifier = 12345n;
+    const proof = makeProof({ nullifier, message: validSemaphoreMessage });
+
+    await expect(
+      pool.connect(contributor).contributeAnon(campaignId, amount, proof, { value: amount })
+    ).to.emit(pool, "AnonymousContributionReceived");
+
+    const c = await pool.campaigns(campaignId);
+    expect(c.totalRaised).to.equal(amount);
+    expect(c.closed).to.equal(false);
+
+    // Contributor address must not be credited in the public contributions mapping.
+    expect(await pool.contributions(campaignId, contributor.address)).to.equal(0n);
+    expect(await pool.anonymousContributions(campaignId, nullifier)).to.equal(amount);
+  });
+
+  it("reverts anonymous donation with invalid Semaphore proof", async function () {
+    const goal = ethers.parseEther("10");
+    const campaignId = await createGoalCampaign({ goalWei: goal, deadlineOffsetSeconds: 100 });
+
+    const amount = ethers.parseEther("1");
+    const proof = makeProof({ nullifier: 222n, message: 999999n });
+
+    await expect(
+      pool.connect(contributor).contributeAnon(campaignId, amount, proof, { value: amount })
+    ).to.be.revertedWithCustomError(pool, "InvalidSemaphoreProof");
+  });
+
+  it("reverts duplicate anonymous donations (same nullifier)", async function () {
+    const goal = ethers.parseEther("10");
+    const campaignId = await createGoalCampaign({ goalWei: goal, deadlineOffsetSeconds: 100 });
+
+    const amount = ethers.parseEther("2");
+    const nullifier = 333n;
+    const proof = makeProof({ nullifier, message: validSemaphoreMessage });
+
+    await pool.connect(contributor).contributeAnon(campaignId, amount, proof, { value: amount });
+
+    await expect(
+      pool.connect(contributor).contributeAnon(campaignId, amount, proof, { value: amount })
+    ).to.be.revertedWithCustomError(pool, "DuplicateAnonNullifier");
+  });
+
+  it("anonymous refunds: works after deadline when goal not met", async function () {
+    const goal = ethers.parseEther("10");
+    const campaignId = await createGoalCampaign({ goalWei: goal, deadlineOffsetSeconds: 5 });
+
+    const amount = ethers.parseEther("6");
+    const nullifier = 444n;
+    const proof = makeProof({ nullifier, message: validSemaphoreMessage });
+
+    await pool.connect(contributor).contributeAnon(campaignId, amount, proof, { value: amount });
+    await advancePastDeadline(6);
+
+    await pool.finalizeAfterDeadline(campaignId);
+    const cBefore = await pool.campaigns(campaignId);
+    expect(cBefore.refundEnabled).to.equal(true);
+
+    await expect(pool.connect(contributor).claimRefundAnon(campaignId, proof))
+      .to.emit(pool, "AnonymousRefundClaimed");
+
+    const cAfter = await pool.campaigns(campaignId);
+    expect(cAfter.totalRaised).to.equal(0n);
+    expect(cAfter.totalContributed).to.equal(0n);
+    expect(await pool.escrowBalance(campaignId)).to.equal(0n);
+
+    // Same proof/nullifier cannot be refunded twice.
+    await expect(pool.connect(contributor).claimRefundAnon(campaignId, proof))
+      .to.be.revertedWithCustomError(pool, "NoContribution");
+  });
+
+  it("anonymous donations can close campaign and stream funds", async function () {
+    const goal = ethers.parseEther("10");
+    const campaignId = await createGoalCampaign({ goalWei: goal, deadlineOffsetSeconds: 5 });
+
+    const amount = ethers.parseEther("10");
+    const nullifier = 555n;
+    const proof = makeProof({ nullifier, message: validSemaphoreMessage });
+
+    await pool.connect(contributor).contributeAnon(campaignId, amount, proof, { value: amount });
+    const c = await pool.campaigns(campaignId);
+    expect(c.closed).to.equal(true);
+
+    await advancePastDeadline(6);
+
+    const duration = 50n;
+    await pool.connect(creator).startStreaming(campaignId, duration);
+
+    await advancePastDeadline(25);
+    await pool.connect(creator).withdrawFromStream(campaignId);
+
+    expect(await pool.escrowBalance(campaignId)).to.not.equal(0n);
+
+    // Complete the stream.
+    await advancePastDeadline(100);
+    await pool.connect(creator).withdrawFromStream(campaignId);
+    expect(await pool.escrowBalance(campaignId)).to.equal(0n);
+    expect((await pool.campaigns(campaignId)).fundsReleased).to.equal(true);
   });
 });
 

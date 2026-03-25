@@ -3,3 +3,4 @@
 /* eslint-disable */
 export type { FundingPoolHome } from "./FundingPoolHome";
 export type { ILayerZeroEndpoint } from "./ILayerZeroEndpoint";
+export type { ISemaphore } from "./ISemaphore";
