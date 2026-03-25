@@ -21,6 +21,14 @@ contract Campaign is ReentrancyGuard {
     bool public refundEnabled;
     bool public finalized;
     bool public isVerified;
+    // Linear ETH streaming from escrow to creator after the campaign is successful.
+    // Funds are released pro-rata over time (claimable per second).
+    uint256 public constant DEFAULT_STREAM_DURATION_SECONDS = 30 days;
+    uint256 public streamStartTime;
+    uint256 public streamEndTime;
+    uint256 public streamDurationSeconds;
+    uint256 public streamTotalAmount;
+    uint256 public streamWithdrawnAmount;
     uint256 public reportCount;
     mapping(address => bool) public reporters;
     mapping(address => uint256) public contributions;
@@ -47,6 +55,16 @@ contract Campaign is ReentrancyGuard {
     event ContributionReceived(address indexed contributor, uint256 amount);
     event Withdrawal(address indexed creator, uint256 amount);
     event FundsReleased(address indexed creator, uint256 amount);
+    event StreamStarted(
+        address indexed creator,
+        uint256 totalAmount,
+        uint256 durationSeconds,
+        uint256 ratePerSecond,
+        uint256 startTime,
+        uint256 endTime
+    );
+    event StreamWithdrawn(address indexed creator, uint256 amount, uint256 totalWithdrawn);
+    event StreamStopped(address indexed creator, uint256 remainingAmount, uint256 totalWithdrawn);
     event Refund(address indexed contributor, uint256 amount);
     event RefundClaimed(address indexed contributor, uint256 amount);
     event CampaignClosed(bool goalReached);
@@ -73,6 +91,10 @@ contract Campaign is ReentrancyGuard {
     error RefundNotEnabled();
     error AlreadyFinalized();
     error DeadlineNotReached();
+    error InvalidStreamDuration();
+    error StreamNotActive();
+    error NoStreamFunds();
+    error StreamAlreadyEnded();
     error MilestonesAlreadySet();
     error InvalidPercentage();
     error NoMilestones();
@@ -153,49 +175,123 @@ contract Campaign is ReentrancyGuard {
         return block.chainid;
     }
 
-    /// @notice After deadline, if goal was met, only creator can release full balance. Funds stay in escrow until deadline.
-    function releaseFunds() external nonReentrant {
-        if (msg.sender != creator) revert NotCreator();
-        if (block.timestamp < deadline) revert DeadlineNotReached();
-        if (!closed) revert GoalNotReached();
-        if (fundsWithdrawn || fundsReleased) revert AlreadyWithdrawn();
-        uint256 amount = address(this).balance;
-        fundsWithdrawn = true;
-        fundsReleased = true;
-        (bool ok,) = payable(creator).call{value: amount}("");
-        if (!ok) revert TransferFailed();
-        emit Withdrawal(creator, amount);
-        emit FundsReleased(creator, amount);
+    function streamRatePerSecond() external view returns (uint256) {
+        if (streamDurationSeconds == 0) return 0;
+        return streamTotalAmount / streamDurationSeconds;
     }
 
-    /// @notice DAO-controlled fund release after deadline when goal met.
-    /// Timelock/Governor can execute this as a proposal to release escrow to the creator.
-    function daoReleaseFunds() external nonReentrant onlyAdmin {
+    /// @notice Amount currently claimable from the active stream.
+    function streamClaimable() external view returns (uint256) {
+        if (streamDurationSeconds == 0 || streamStartTime == 0) return 0;
+        uint256 end = block.timestamp < streamEndTime ? block.timestamp : streamEndTime;
+        if (end <= streamStartTime) return 0;
+        uint256 elapsed = end - streamStartTime;
+        uint256 totalDue = (streamTotalAmount * elapsed) / streamDurationSeconds;
+        if (totalDue <= streamWithdrawnAmount) return 0;
+        return totalDue - streamWithdrawnAmount;
+    }
+
+    function _startStream(uint256 durationSeconds) internal {
         if (block.timestamp < deadline) revert DeadlineNotReached();
         if (!closed) revert GoalNotReached();
-        if (fundsWithdrawn || fundsReleased) revert AlreadyWithdrawn();
-        uint256 amount = address(this).balance;
+        // Prevent mixing milestone releases with streaming escrow pulls.
+        if (streamStartTime != 0) revert AlreadyWithdrawn();
+        if (durationSeconds == 0) revert InvalidStreamDuration();
+
+        uint256 totalAmount = address(this).balance;
+        if (totalAmount == 0) revert NoFundsToRelease();
+
+        streamStartTime = block.timestamp;
+        streamDurationSeconds = durationSeconds;
+        streamEndTime = block.timestamp + durationSeconds;
+        streamTotalAmount = totalAmount;
+        streamWithdrawnAmount = 0;
+
         fundsWithdrawn = true;
-        fundsReleased = true;
+        fundsReleased = false;
+
+        uint256 rate = totalAmount / durationSeconds;
+        emit StreamStarted(creator, totalAmount, durationSeconds, rate, streamStartTime, streamEndTime);
+    }
+
+    /// @notice Start real-time streaming of escrow funds to the campaign creator.
+    /// @dev Funds are streamed pro-rata over `durationSeconds`; creator can pull via `withdrawFromStream()`.
+    function startStreaming(uint256 durationSeconds) external nonReentrant {
+        if (msg.sender != creator) revert NotCreator();
+        _startStream(durationSeconds);
+    }
+
+    /// @notice DAO-controlled streaming start after deadline when goal is met.
+    function daoStartStreaming(uint256 durationSeconds) external nonReentrant onlyAdmin {
+        _startStream(durationSeconds);
+    }
+
+    /// @notice Withdraw the currently claimable streamed amount.
+    function withdrawFromStream() external nonReentrant {
+        if (msg.sender != creator) revert NotCreator();
+        if (!fundsWithdrawn || fundsReleased) revert StreamNotActive();
+        if (streamStartTime == 0 || streamDurationSeconds == 0) revert StreamNotActive();
+
+        uint256 end = block.timestamp < streamEndTime ? block.timestamp : streamEndTime;
+        if (end <= streamStartTime) revert NoStreamFunds();
+
+        uint256 elapsed = end - streamStartTime;
+        uint256 totalDue = (streamTotalAmount * elapsed) / streamDurationSeconds;
+        if (totalDue <= streamWithdrawnAmount) revert NoStreamFunds();
+
+        uint256 amount = totalDue - streamWithdrawnAmount;
+        streamWithdrawnAmount = totalDue;
+
         (bool ok,) = payable(creator).call{value: amount}("");
         if (!ok) revert TransferFailed();
-        emit Withdrawal(creator, amount);
-        emit FundsReleased(creator, amount);
+
+        emit StreamWithdrawn(creator, amount, streamWithdrawnAmount);
+
+        // Close the stream on final withdrawal.
+        if (streamWithdrawnAmount >= streamTotalAmount) {
+            fundsReleased = true;
+            emit FundsReleased(creator, streamTotalAmount);
+        }
+    }
+
+    /// @notice Stop the stream early and withdraw the remaining escrow immediately.
+    /// @dev This is an explicit "stop" endpoint (creator-only).
+    function stopStream() external nonReentrant {
+        if (msg.sender != creator) revert NotCreator();
+        if (!fundsWithdrawn || fundsReleased) revert StreamNotActive();
+        if (streamStartTime == 0 || streamDurationSeconds == 0) revert StreamNotActive();
+        if (block.timestamp >= streamEndTime) revert StreamAlreadyEnded();
+
+        uint256 remaining = streamTotalAmount - streamWithdrawnAmount;
+        if (remaining == 0) revert NoStreamFunds();
+
+        streamWithdrawnAmount = streamTotalAmount;
+        streamEndTime = block.timestamp;
+
+        (bool ok,) = payable(creator).call{value: remaining}("");
+        if (!ok) revert TransferFailed();
+
+        emit StreamWithdrawn(creator, remaining, streamWithdrawnAmount);
+        emit StreamStopped(creator, remaining, streamWithdrawnAmount);
+        fundsReleased = true;
+        emit FundsReleased(creator, streamTotalAmount);
+    }
+
+    /// @notice Legacy entrypoint: starts streaming with the default duration.
+    function releaseFunds() external nonReentrant {
+        if (msg.sender != creator) revert NotCreator();
+        _startStream(DEFAULT_STREAM_DURATION_SECONDS);
     }
 
     /// @dev Legacy alias
     function withdrawFunds() external nonReentrant {
         if (msg.sender != creator) revert NotCreator();
-        if (block.timestamp < deadline) revert DeadlineNotReached();
-        if (!closed) revert GoalNotReached();
-        if (fundsWithdrawn || fundsReleased) revert AlreadyWithdrawn();
-        uint256 amount = address(this).balance;
-        fundsWithdrawn = true;
-        fundsReleased = true;
-        (bool ok,) = payable(creator).call{value: amount}("");
-        if (!ok) revert TransferFailed();
-        emit Withdrawal(creator, amount);
-        emit FundsReleased(creator, amount);
+        _startStream(DEFAULT_STREAM_DURATION_SECONDS);
+    }
+
+    /// @notice Legacy DAO entrypoint: starts streaming with the default duration.
+    function daoReleaseFunds() external nonReentrant onlyAdmin {
+        _startStream(DEFAULT_STREAM_DURATION_SECONDS);
     }
 
     /// @notice Call after deadline to enable refunds when goal was not met. Anyone may call once.
@@ -259,6 +355,8 @@ contract Campaign is ReentrancyGuard {
         if (milestoneId >= milestones.length) revert InvalidMilestoneId();
         if (block.timestamp < deadline) revert DeadlineNotReached();
         if (!closed) revert GoalNotReached();
+        // Prevent mixing milestone releases with streaming escrow pulls.
+        if (streamStartTime != 0) revert AlreadyWithdrawn();
 
         Milestone storage m = milestones[milestoneId];
         if (m.released) revert MilestoneAlreadyReleased();
@@ -289,6 +387,7 @@ contract Campaign is ReentrancyGuard {
         if (milestoneId >= milestones.length) revert InvalidMilestoneId();
         if (block.timestamp < deadline) revert DeadlineNotReached();
         if (!closed) revert GoalNotReached();
+        if (fundsWithdrawn || fundsReleased) revert AlreadyWithdrawn();
 
         Milestone storage m = milestones[milestoneId];
         if (m.released) revert MilestoneAlreadyReleased();

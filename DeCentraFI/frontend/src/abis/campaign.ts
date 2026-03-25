@@ -1,5 +1,55 @@
 export const campaignAbi = [
   {
+    type: "event",
+    name: "ContributionReceived",
+    inputs: [
+      { name: "contributor", type: "address", indexed: true },
+      { name: "amount", type: "uint256", indexed: false },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
+    name: "FundsReleased",
+    inputs: [
+      { name: "creator", type: "address", indexed: true },
+      { name: "amount", type: "uint256", indexed: false },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
+    name: "RefundClaimed",
+    inputs: [
+      { name: "contributor", type: "address", indexed: true },
+      { name: "amount", type: "uint256", indexed: false },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
+    name: "StreamStarted",
+    inputs: [
+      { name: "creator", type: "address", indexed: true },
+      { name: "totalAmount", type: "uint256", indexed: false },
+      { name: "durationSeconds", type: "uint256", indexed: false },
+      { name: "ratePerSecond", type: "uint256", indexed: false },
+      { name: "startTime", type: "uint256", indexed: false },
+      { name: "endTime", type: "uint256", indexed: false },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
+    name: "StreamWithdrawn",
+    inputs: [
+      { name: "creator", type: "address", indexed: true },
+      { name: "amount", type: "uint256", indexed: false },
+      { name: "totalWithdrawn", type: "uint256", indexed: false },
+    ],
+    anonymous: false,
+  },
+  {
     type: "function",
     name: "contribute",
     inputs: [],
@@ -16,6 +66,27 @@ export const campaignAbi = [
   {
     type: "function",
     name: "releaseFunds",
+    inputs: [],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "startStreaming",
+    inputs: [{ name: "durationSeconds", type: "uint256", internalType: "uint256" }],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "daoStartStreaming",
+    inputs: [{ name: "durationSeconds", type: "uint256", internalType: "uint256" }],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "withdrawFromStream",
     inputs: [],
     outputs: [],
     stateMutability: "nonpayable",
@@ -88,6 +159,25 @@ export const campaignAbi = [
     name: "fundsReleased",
     inputs: [],
     outputs: [{ name: "", type: "bool", internalType: "bool" }],
+    stateMutability: "view",
+  },
+  { type: "function", name: "streamStartTime", inputs: [], outputs: [{ name: "", type: "uint256", internalType: "uint256" }], stateMutability: "view" },
+  { type: "function", name: "streamEndTime", inputs: [], outputs: [{ name: "", type: "uint256", internalType: "uint256" }], stateMutability: "view" },
+  { type: "function", name: "streamDurationSeconds", inputs: [], outputs: [{ name: "", type: "uint256", internalType: "uint256" }], stateMutability: "view" },
+  { type: "function", name: "streamTotalAmount", inputs: [], outputs: [{ name: "", type: "uint256", internalType: "uint256" }], stateMutability: "view" },
+  { type: "function", name: "streamWithdrawnAmount", inputs: [], outputs: [{ name: "", type: "uint256", internalType: "uint256" }], stateMutability: "view" },
+  {
+    type: "function",
+    name: "streamRatePerSecond",
+    inputs: [],
+    outputs: [{ name: "", type: "uint256", internalType: "uint256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "streamClaimable",
+    inputs: [],
+    outputs: [{ name: "", type: "uint256", internalType: "uint256" }],
     stateMutability: "view",
   },
   {

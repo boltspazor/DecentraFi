@@ -52,6 +52,13 @@ vi.mock("../services/campaignContract", () => ({
     closed: false,
     fundsWithdrawn: false,
     fundsReleased: false,
+    streamStartTime: 0n,
+    streamEndTime: 0n,
+    streamDurationSeconds: 0n,
+    streamTotalAmount: 0n,
+    streamWithdrawnAmount: 0n,
+    streamRatePerSecond: 0n,
+    streamClaimable: 0n,
     refundEnabled: false,
     finalized: false,
     creator: "0xcreator0000000000000000000000000000000001",
@@ -71,6 +78,13 @@ vi.mock("../services/campaignContract", () => ({
   useWithdraw: vi.fn(() => ({
     releaseFunds: vi.fn(),
     withdrawFunds: vi.fn(),
+    isPending: false,
+    isSuccess: false,
+    error: null,
+    reset: vi.fn(),
+  })),
+  useStreamWithdraw: vi.fn(() => ({
+    withdrawFromStream: vi.fn(),
     isPending: false,
     isSuccess: false,
     error: null,
@@ -282,6 +296,13 @@ describe("CampaignDetail", () => {
       closed: false,
       fundsWithdrawn: false,
       fundsReleased: false,
+      streamStartTime: 0n,
+      streamEndTime: 0n,
+      streamDurationSeconds: 0n,
+      streamTotalAmount: 0n,
+      streamWithdrawnAmount: 0n,
+      streamRatePerSecond: 0n,
+      streamClaimable: 0n,
       refundEnabled: false,
       finalized: false,
       creator: "0xanothercreator00000000000000000000000000",
@@ -292,7 +313,7 @@ describe("CampaignDetail", () => {
     await waitFor(() => {
       expect(screen.getByRole("heading", { name: /test campaign/i })).toBeInTheDocument();
     });
-    expect(screen.queryByRole("button", { name: /withdraw funds/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /start streaming/i })).not.toBeInTheDocument();
   });
 
   it("shows withdraw button only when creator, goal reached, deadline passed, and not withdrawn", async () => {
@@ -306,6 +327,13 @@ describe("CampaignDetail", () => {
       closed: true,
       fundsWithdrawn: false,
       fundsReleased: false,
+      streamStartTime: 0n,
+      streamEndTime: 0n,
+      streamDurationSeconds: 0n,
+      streamTotalAmount: 0n,
+      streamWithdrawnAmount: 0n,
+      streamRatePerSecond: 0n,
+      streamClaimable: 0n,
       refundEnabled: false,
       finalized: false,
       creator: "0xuser0000000000000000000000000000000001",
@@ -314,7 +342,7 @@ describe("CampaignDetail", () => {
     } as never);
     renderCampaignDetail();
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: /withdraw funds/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /start streaming/i })).toBeInTheDocument();
     });
   });
 

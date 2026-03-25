@@ -34,6 +34,9 @@ function DashboardRow({ item }: { item: UserContributionSummary }) {
     onFundsReleased: () => {
       refetch();
     },
+    onStreamWithdrawn: () => {
+      refetch();
+    },
     onRefundClaimed: () => {
       refetch();
     },

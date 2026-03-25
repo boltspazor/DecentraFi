@@ -41,16 +41,20 @@ describe("useCampaignEvents", () => {
     expect(mockContractOn).not.toHaveBeenCalled();
   });
 
-  it("subscribes to ContributionReceived, FundsReleased, RefundClaimed when WS URL is set", () => {
+  it("subscribes to ContributionReceived, FundsReleased, StreamStarted, StreamWithdrawn, RefundClaimed when WS URL is set", () => {
     renderHook(() =>
       useCampaignEvents(campaignAddress, {
         onContributionReceived: vi.fn(),
         onFundsReleased: vi.fn(),
+        onStreamStarted: vi.fn(),
+        onStreamWithdrawn: vi.fn(),
         onRefundClaimed: vi.fn(),
       })
     );
     expect(mockContractOn).toHaveBeenCalledWith("ContributionReceived", expect.any(Function));
     expect(mockContractOn).toHaveBeenCalledWith("FundsReleased", expect.any(Function));
+    expect(mockContractOn).toHaveBeenCalledWith("StreamStarted", expect.any(Function));
+    expect(mockContractOn).toHaveBeenCalledWith("StreamWithdrawn", expect.any(Function));
     expect(mockContractOn).toHaveBeenCalledWith("RefundClaimed", expect.any(Function));
   });
 
@@ -59,12 +63,16 @@ describe("useCampaignEvents", () => {
       useCampaignEvents(campaignAddress, {
         onContributionReceived: vi.fn(),
         onFundsReleased: vi.fn(),
+        onStreamStarted: vi.fn(),
+        onStreamWithdrawn: vi.fn(),
         onRefundClaimed: vi.fn(),
       })
     );
     unmount();
     expect(mockContractOff).toHaveBeenCalledWith("ContributionReceived", expect.any(Function));
     expect(mockContractOff).toHaveBeenCalledWith("FundsReleased", expect.any(Function));
+    expect(mockContractOff).toHaveBeenCalledWith("StreamStarted", expect.any(Function));
+    expect(mockContractOff).toHaveBeenCalledWith("StreamWithdrawn", expect.any(Function));
     expect(mockContractOff).toHaveBeenCalledWith("RefundClaimed", expect.any(Function));
     expect(mockProviderDestroy).toHaveBeenCalled();
   });

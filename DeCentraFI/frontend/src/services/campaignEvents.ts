@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { ethers } from "ethers";
 import { campaignAbi } from "../abis/campaign";
 
-type EventName = "ContributionReceived" | "FundsReleased" | "RefundClaimed";
+type EventName = "ContributionReceived" | "FundsReleased" | "RefundClaimed" | "StreamStarted" | "StreamWithdrawn";
 
 export interface CampaignEventHandlers {
   onContributionReceived?: (payload: {
@@ -11,6 +11,21 @@ export interface CampaignEventHandlers {
     txHash: string;
   }) => void;
   onFundsReleased?: (payload: { creator: string; amountWei: bigint; txHash: string }) => void;
+  onStreamStarted?: (payload: {
+    creator: string;
+    totalAmountWei: bigint;
+    durationSeconds: bigint;
+    rateWeiPerSecond: bigint;
+    startTime: bigint;
+    endTime: bigint;
+    txHash: string;
+  }) => void;
+  onStreamWithdrawn?: (payload: {
+    creator: string;
+    amountWei: bigint;
+    totalWithdrawnWei: bigint;
+    txHash: string;
+  }) => void;
   onRefundClaimed?: (payload: {
     contributor: string;
     amountWei: bigint;
@@ -66,6 +81,42 @@ export function useCampaignEvents(
       });
     };
 
+    const streamStartedListener = (
+      creator: string,
+      totalAmount: bigint,
+      durationSeconds: bigint,
+      ratePerSecond: bigint,
+      startTime: bigint,
+      endTime: bigint,
+      event: ethers.Log
+    ) => {
+      if (!mountedRef.current) return;
+      handlers.onStreamStarted?.({
+        creator,
+        totalAmountWei: totalAmount,
+        durationSeconds,
+        rateWeiPerSecond: ratePerSecond,
+        startTime,
+        endTime,
+        txHash: event.transactionHash,
+      });
+    };
+
+    const streamWithdrawnListener = (
+      creator: string,
+      amount: bigint,
+      totalWithdrawn: bigint,
+      event: ethers.Log
+    ) => {
+      if (!mountedRef.current) return;
+      handlers.onStreamWithdrawn?.({
+        creator,
+        amountWei: amount,
+        totalWithdrawnWei: totalWithdrawn,
+        txHash: event.transactionHash,
+      });
+    };
+
     const refundClaimedListener = (contributor: string, amount: bigint, event: ethers.Log) => {
       if (!mountedRef.current) return;
       handlers.onRefundClaimed?.({
@@ -77,14 +128,25 @@ export function useCampaignEvents(
 
     contract.on("ContributionReceived" as EventName, contributionListener);
     contract.on("FundsReleased" as EventName, fundsReleasedListener);
+    contract.on("StreamStarted" as EventName, streamStartedListener);
+    contract.on("StreamWithdrawn" as EventName, streamWithdrawnListener);
     contract.on("RefundClaimed" as EventName, refundClaimedListener);
 
     return () => {
       contract.off("ContributionReceived" as EventName, contributionListener);
       contract.off("FundsReleased" as EventName, fundsReleasedListener);
+      contract.off("StreamStarted" as EventName, streamStartedListener);
+      contract.off("StreamWithdrawn" as EventName, streamWithdrawnListener);
       contract.off("RefundClaimed" as EventName, refundClaimedListener);
       provider.destroy?.();
     };
-  }, [campaignAddress, handlers.onContributionReceived, handlers.onFundsReleased, handlers.onRefundClaimed]);
+  }, [
+    campaignAddress,
+    handlers.onContributionReceived,
+    handlers.onFundsReleased,
+    handlers.onStreamStarted,
+    handlers.onStreamWithdrawn,
+    handlers.onRefundClaimed,
+  ]);
 }
 

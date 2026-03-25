@@ -26,6 +26,7 @@ import type {
 export interface CampaignInterface extends Interface {
   getFunction(
     nameOrSignature:
+      | "DEFAULT_STREAM_DURATION_SECONDS"
       | "admin"
       | "approveMilestone"
       | "claimRefund"
@@ -36,6 +37,7 @@ export interface CampaignInterface extends Interface {
       | "creator"
       | "daoReleaseFunds"
       | "daoReleaseMilestoneFunds"
+      | "daoStartStreaming"
       | "deadline"
       | "executeProposal"
       | "finalizeAfterDeadline"
@@ -60,11 +62,21 @@ export interface CampaignInterface extends Interface {
       | "reportCount"
       | "reporters"
       | "setMilestones"
+      | "startStreaming"
+      | "stopStream"
+      | "streamClaimable"
+      | "streamDurationSeconds"
+      | "streamEndTime"
+      | "streamRatePerSecond"
+      | "streamStartTime"
+      | "streamTotalAmount"
+      | "streamWithdrawnAmount"
       | "totalContributed"
       | "totalMilestoneReleased"
       | "totalRaised"
       | "verifyCampaign"
       | "voteProposal"
+      | "withdrawFromStream"
       | "withdrawFunds"
   ): FunctionFragment;
 
@@ -85,9 +97,16 @@ export interface CampaignInterface extends Interface {
       | "ProposalVoted"
       | "Refund"
       | "RefundClaimed"
+      | "StreamStarted"
+      | "StreamStopped"
+      | "StreamWithdrawn"
       | "Withdrawal"
   ): EventFragment;
 
+  encodeFunctionData(
+    functionFragment: "DEFAULT_STREAM_DURATION_SECONDS",
+    values?: undefined
+  ): string;
   encodeFunctionData(functionFragment: "admin", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "approveMilestone",
@@ -117,6 +136,10 @@ export interface CampaignInterface extends Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "daoReleaseMilestoneFunds",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "daoStartStreaming",
     values: [BigNumberish]
   ): string;
   encodeFunctionData(functionFragment: "deadline", values?: undefined): string;
@@ -204,6 +227,42 @@ export interface CampaignInterface extends Interface {
     values: [BigNumberish[]]
   ): string;
   encodeFunctionData(
+    functionFragment: "startStreaming",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "stopStream",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "streamClaimable",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "streamDurationSeconds",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "streamEndTime",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "streamRatePerSecond",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "streamStartTime",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "streamTotalAmount",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "streamWithdrawnAmount",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
     functionFragment: "totalContributed",
     values?: undefined
   ): string;
@@ -224,10 +283,18 @@ export interface CampaignInterface extends Interface {
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
+    functionFragment: "withdrawFromStream",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
     functionFragment: "withdrawFunds",
     values?: undefined
   ): string;
 
+  decodeFunctionResult(
+    functionFragment: "DEFAULT_STREAM_DURATION_SECONDS",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "admin", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "approveMilestone",
@@ -254,6 +321,10 @@ export interface CampaignInterface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "daoReleaseMilestoneFunds",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "daoStartStreaming",
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "deadline", data: BytesLike): Result;
@@ -326,6 +397,39 @@ export interface CampaignInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "startStreaming",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(functionFragment: "stopStream", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "streamClaimable",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "streamDurationSeconds",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "streamEndTime",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "streamRatePerSecond",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "streamStartTime",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "streamTotalAmount",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "streamWithdrawnAmount",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "totalContributed",
     data: BytesLike
   ): Result;
@@ -343,6 +447,10 @@ export interface CampaignInterface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "voteProposal",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "withdrawFromStream",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -563,6 +671,81 @@ export namespace RefundClaimedEvent {
   export type LogDescription = TypedLogDescription<Event>;
 }
 
+export namespace StreamStartedEvent {
+  export type InputTuple = [
+    creator: AddressLike,
+    totalAmount: BigNumberish,
+    durationSeconds: BigNumberish,
+    ratePerSecond: BigNumberish,
+    startTime: BigNumberish,
+    endTime: BigNumberish
+  ];
+  export type OutputTuple = [
+    creator: string,
+    totalAmount: bigint,
+    durationSeconds: bigint,
+    ratePerSecond: bigint,
+    startTime: bigint,
+    endTime: bigint
+  ];
+  export interface OutputObject {
+    creator: string;
+    totalAmount: bigint;
+    durationSeconds: bigint;
+    ratePerSecond: bigint;
+    startTime: bigint;
+    endTime: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace StreamStoppedEvent {
+  export type InputTuple = [
+    creator: AddressLike,
+    remainingAmount: BigNumberish,
+    totalWithdrawn: BigNumberish
+  ];
+  export type OutputTuple = [
+    creator: string,
+    remainingAmount: bigint,
+    totalWithdrawn: bigint
+  ];
+  export interface OutputObject {
+    creator: string;
+    remainingAmount: bigint;
+    totalWithdrawn: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace StreamWithdrawnEvent {
+  export type InputTuple = [
+    creator: AddressLike,
+    amount: BigNumberish,
+    totalWithdrawn: BigNumberish
+  ];
+  export type OutputTuple = [
+    creator: string,
+    amount: bigint,
+    totalWithdrawn: bigint
+  ];
+  export interface OutputObject {
+    creator: string;
+    amount: bigint;
+    totalWithdrawn: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
 export namespace WithdrawalEvent {
   export type InputTuple = [creator: AddressLike, amount: BigNumberish];
   export type OutputTuple = [creator: string, amount: bigint];
@@ -619,6 +802,8 @@ export interface Campaign extends BaseContract {
     event?: TCEvent
   ): Promise<this>;
 
+  DEFAULT_STREAM_DURATION_SECONDS: TypedContractMethod<[], [bigint], "view">;
+
   admin: TypedContractMethod<[], [string], "view">;
 
   approveMilestone: TypedContractMethod<
@@ -647,6 +832,12 @@ export interface Campaign extends BaseContract {
 
   daoReleaseMilestoneFunds: TypedContractMethod<
     [milestoneId: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+
+  daoStartStreaming: TypedContractMethod<
+    [durationSeconds: BigNumberish],
     [void],
     "nonpayable"
   >;
@@ -737,6 +928,28 @@ export interface Campaign extends BaseContract {
     "nonpayable"
   >;
 
+  startStreaming: TypedContractMethod<
+    [durationSeconds: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+
+  stopStream: TypedContractMethod<[], [void], "nonpayable">;
+
+  streamClaimable: TypedContractMethod<[], [bigint], "view">;
+
+  streamDurationSeconds: TypedContractMethod<[], [bigint], "view">;
+
+  streamEndTime: TypedContractMethod<[], [bigint], "view">;
+
+  streamRatePerSecond: TypedContractMethod<[], [bigint], "view">;
+
+  streamStartTime: TypedContractMethod<[], [bigint], "view">;
+
+  streamTotalAmount: TypedContractMethod<[], [bigint], "view">;
+
+  streamWithdrawnAmount: TypedContractMethod<[], [bigint], "view">;
+
   totalContributed: TypedContractMethod<[], [bigint], "view">;
 
   totalMilestoneReleased: TypedContractMethod<[], [bigint], "view">;
@@ -751,12 +964,17 @@ export interface Campaign extends BaseContract {
     "nonpayable"
   >;
 
+  withdrawFromStream: TypedContractMethod<[], [void], "nonpayable">;
+
   withdrawFunds: TypedContractMethod<[], [void], "nonpayable">;
 
   getFunction<T extends ContractMethod = ContractMethod>(
     key: string | FunctionFragment
   ): T;
 
+  getFunction(
+    nameOrSignature: "DEFAULT_STREAM_DURATION_SECONDS"
+  ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
     nameOrSignature: "admin"
   ): TypedContractMethod<[], [string], "view">;
@@ -787,6 +1005,9 @@ export interface Campaign extends BaseContract {
   getFunction(
     nameOrSignature: "daoReleaseMilestoneFunds"
   ): TypedContractMethod<[milestoneId: BigNumberish], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "daoStartStreaming"
+  ): TypedContractMethod<[durationSeconds: BigNumberish], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "deadline"
   ): TypedContractMethod<[], [bigint], "view">;
@@ -882,6 +1103,33 @@ export interface Campaign extends BaseContract {
     nameOrSignature: "setMilestones"
   ): TypedContractMethod<[percentages: BigNumberish[]], [void], "nonpayable">;
   getFunction(
+    nameOrSignature: "startStreaming"
+  ): TypedContractMethod<[durationSeconds: BigNumberish], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "stopStream"
+  ): TypedContractMethod<[], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "streamClaimable"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "streamDurationSeconds"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "streamEndTime"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "streamRatePerSecond"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "streamStartTime"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "streamTotalAmount"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "streamWithdrawnAmount"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
     nameOrSignature: "totalContributed"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
@@ -896,6 +1144,9 @@ export interface Campaign extends BaseContract {
   getFunction(
     nameOrSignature: "voteProposal"
   ): TypedContractMethod<[proposalId: BigNumberish], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "withdrawFromStream"
+  ): TypedContractMethod<[], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "withdrawFunds"
   ): TypedContractMethod<[], [void], "nonpayable">;
@@ -1004,6 +1255,27 @@ export interface Campaign extends BaseContract {
     RefundClaimedEvent.InputTuple,
     RefundClaimedEvent.OutputTuple,
     RefundClaimedEvent.OutputObject
+  >;
+  getEvent(
+    key: "StreamStarted"
+  ): TypedContractEvent<
+    StreamStartedEvent.InputTuple,
+    StreamStartedEvent.OutputTuple,
+    StreamStartedEvent.OutputObject
+  >;
+  getEvent(
+    key: "StreamStopped"
+  ): TypedContractEvent<
+    StreamStoppedEvent.InputTuple,
+    StreamStoppedEvent.OutputTuple,
+    StreamStoppedEvent.OutputObject
+  >;
+  getEvent(
+    key: "StreamWithdrawn"
+  ): TypedContractEvent<
+    StreamWithdrawnEvent.InputTuple,
+    StreamWithdrawnEvent.OutputTuple,
+    StreamWithdrawnEvent.OutputObject
   >;
   getEvent(
     key: "Withdrawal"
@@ -1177,6 +1449,39 @@ export interface Campaign extends BaseContract {
       RefundClaimedEvent.InputTuple,
       RefundClaimedEvent.OutputTuple,
       RefundClaimedEvent.OutputObject
+    >;
+
+    "StreamStarted(address,uint256,uint256,uint256,uint256,uint256)": TypedContractEvent<
+      StreamStartedEvent.InputTuple,
+      StreamStartedEvent.OutputTuple,
+      StreamStartedEvent.OutputObject
+    >;
+    StreamStarted: TypedContractEvent<
+      StreamStartedEvent.InputTuple,
+      StreamStartedEvent.OutputTuple,
+      StreamStartedEvent.OutputObject
+    >;
+
+    "StreamStopped(address,uint256,uint256)": TypedContractEvent<
+      StreamStoppedEvent.InputTuple,
+      StreamStoppedEvent.OutputTuple,
+      StreamStoppedEvent.OutputObject
+    >;
+    StreamStopped: TypedContractEvent<
+      StreamStoppedEvent.InputTuple,
+      StreamStoppedEvent.OutputTuple,
+      StreamStoppedEvent.OutputObject
+    >;
+
+    "StreamWithdrawn(address,uint256,uint256)": TypedContractEvent<
+      StreamWithdrawnEvent.InputTuple,
+      StreamWithdrawnEvent.OutputTuple,
+      StreamWithdrawnEvent.OutputObject
+    >;
+    StreamWithdrawn: TypedContractEvent<
+      StreamWithdrawnEvent.InputTuple,
+      StreamWithdrawnEvent.OutputTuple,
+      StreamWithdrawnEvent.OutputObject
     >;
 
     "Withdrawal(address,uint256)": TypedContractEvent<

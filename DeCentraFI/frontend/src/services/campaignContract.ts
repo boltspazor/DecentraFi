@@ -60,13 +60,13 @@ export function useCampaign(campaignAddress: `0x${string}` | null, chainId: numb
     functionName: "closed",
     chainId,
   });
-  const { data: fundsWithdrawn } = useReadContract({
+  const { data: fundsWithdrawn, refetch: refetchFundsWithdrawn } = useReadContract({
     address: campaignAddress ?? undefined,
     abi: campaignAbi,
     functionName: "fundsWithdrawn",
     chainId,
   });
-  const { data: fundsReleased } = useReadContract({
+  const { data: fundsReleased, refetch: refetchFundsReleased } = useReadContract({
     address: campaignAddress ?? undefined,
     abi: campaignAbi,
     functionName: "fundsReleased",
@@ -98,9 +98,61 @@ export function useCampaign(campaignAddress: `0x${string}` | null, chainId: numb
     chainId,
   });
 
+  const { data: streamStartTime, refetch: refetchStreamStartTime } = useReadContract({
+    address: campaignAddress ?? undefined,
+    abi: campaignAbi,
+    functionName: "streamStartTime",
+    chainId,
+  });
+  const { data: streamEndTime, refetch: refetchStreamEndTime } = useReadContract({
+    address: campaignAddress ?? undefined,
+    abi: campaignAbi,
+    functionName: "streamEndTime",
+    chainId,
+  });
+  const { data: streamDurationSeconds, refetch: refetchStreamDurationSeconds } = useReadContract({
+    address: campaignAddress ?? undefined,
+    abi: campaignAbi,
+    functionName: "streamDurationSeconds",
+    chainId,
+  });
+  const { data: streamTotalAmount, refetch: refetchStreamTotalAmount } = useReadContract({
+    address: campaignAddress ?? undefined,
+    abi: campaignAbi,
+    functionName: "streamTotalAmount",
+    chainId,
+  });
+  const { data: streamWithdrawnAmount, refetch: refetchStreamWithdrawnAmount } = useReadContract({
+    address: campaignAddress ?? undefined,
+    abi: campaignAbi,
+    functionName: "streamWithdrawnAmount",
+    chainId,
+  });
+  const { data: streamRatePerSecond, refetch: refetchStreamRatePerSecond } = useReadContract({
+    address: campaignAddress ?? undefined,
+    abi: campaignAbi,
+    functionName: "streamRatePerSecond",
+    chainId,
+  });
+  const { data: streamClaimable, refetch: refetchStreamClaimable } = useReadContract({
+    address: campaignAddress ?? undefined,
+    abi: campaignAbi,
+    functionName: "streamClaimable",
+    chainId,
+  });
+
   const refetch = () => {
     refetchTotal();
     refetchMyContribution();
+    refetchFundsWithdrawn();
+    refetchFundsReleased();
+    refetchStreamStartTime();
+    refetchStreamEndTime();
+    refetchStreamDurationSeconds();
+    refetchStreamTotalAmount();
+    refetchStreamWithdrawnAmount();
+    refetchStreamRatePerSecond();
+    refetchStreamClaimable();
   };
 
   return {
@@ -115,6 +167,13 @@ export function useCampaign(campaignAddress: `0x${string}` | null, chainId: numb
     finalized: finalized ?? false,
     creator: creator ?? "0x0",
     myContribution: myContribution ?? 0n,
+    streamStartTime: streamStartTime ?? 0n,
+    streamEndTime: streamEndTime ?? 0n,
+    streamDurationSeconds: streamDurationSeconds ?? 0n,
+    streamTotalAmount: streamTotalAmount ?? 0n,
+    streamWithdrawnAmount: streamWithdrawnAmount ?? 0n,
+    streamRatePerSecond: streamRatePerSecond ?? 0n,
+    streamClaimable: streamClaimable ?? 0n,
     refetch,
     contract: useCampaignContract(campaignAddress, chainId),
   };
@@ -177,6 +236,36 @@ export function useWithdraw(campaignAddress: `0x${string}` | null, chainId: numb
   return {
     releaseFunds,
     withdrawFunds: releaseFunds,
+    hash,
+    isPending: isPending || isConfirming,
+    isSuccess,
+    error,
+    reset,
+  };
+}
+
+export function useStreamWithdraw(campaignAddress: `0x${string}` | null, chainId: number = DEFAULT_CHAIN_ID) {
+  const {
+    writeContract,
+    data: hash,
+    isPending,
+    error,
+    reset,
+  } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash, chainId });
+
+  function withdrawFromStream() {
+    if (!campaignAddress) throw new Error("Campaign address required");
+    writeContract({
+      address: campaignAddress,
+      abi: campaignAbi,
+      functionName: "withdrawFromStream",
+      chainId,
+    });
+  }
+
+  return {
+    withdrawFromStream,
     hash,
     isPending: isPending || isConfirming,
     isSuccess,

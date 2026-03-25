@@ -5,6 +5,7 @@ import {
   useCampaign,
   useContribute,
   useWithdraw,
+  useStreamWithdraw,
   useFinalize,
   useRefund,
   useVoteProposal,
@@ -69,6 +70,7 @@ export function CampaignDetail() {
   const [proposals, setProposals] = useState<
     { id: number; description: string; voteCount: bigint; executed: boolean }[]
   >([]);
+  const [nowSec, setNowSec] = useState<bigint>(() => BigInt(Math.floor(Date.now() / 1000)));
 
   const currentChainId = chainId ?? null;
   const addressesByChain = campaignMeta?.addressesByChain ?? [];
@@ -100,6 +102,13 @@ export function CampaignDetail() {
     closed,
     fundsWithdrawn,
     fundsReleased,
+    streamStartTime,
+    streamEndTime,
+    streamDurationSeconds,
+    streamTotalAmount,
+    streamWithdrawnAmount,
+    streamRatePerSecond,
+    streamClaimable,
     refundEnabled,
     finalized,
     creator,
@@ -127,6 +136,14 @@ export function CampaignDetail() {
   } = useWithdraw(campaignAddress, chainIdForHooks);
 
   const {
+    withdrawFromStream,
+    isPending: isStreamWithdrawPending,
+    isSuccess: isStreamWithdrawSuccess,
+    error: streamWithdrawError,
+    reset: resetStreamWithdraw,
+  } = useStreamWithdraw(campaignAddress, chainIdForHooks);
+
+  const {
     finalizeAfterDeadline,
     isPending: isFinalizePending,
     isSuccess: isFinalizeSuccess,
@@ -146,8 +163,28 @@ export function CampaignDetail() {
   const goalReached = goal > 0n && totalRaised >= goal;
   const raisedForProgress = totalRaised > 0n ? totalRaised : totalContributed;
   const progressPercent = goal > 0n ? Number((raisedForProgress * 100n) / goal) : 0;
-  const canReleaseFunds =
+  const canStartStreaming =
     isCreator && closed && !fundsWithdrawn && !fundsReleased && isExpired;
+
+  const streamClaimableEstimated = useMemo(() => {
+    if (streamDurationSeconds === 0n || streamStartTime === 0n) return 0n;
+    const end = nowSec < streamEndTime ? nowSec : streamEndTime;
+    if (end <= streamStartTime) return 0n;
+    const elapsed = end - streamStartTime;
+    const totalDue = (streamTotalAmount * elapsed) / streamDurationSeconds;
+    if (totalDue <= streamWithdrawnAmount) return 0n;
+    return totalDue - streamWithdrawnAmount;
+  }, [
+    nowSec,
+    streamDurationSeconds,
+    streamStartTime,
+    streamEndTime,
+    streamTotalAmount,
+    streamWithdrawnAmount,
+  ]);
+
+  const canWithdrawStream =
+    isCreator && fundsWithdrawn && !fundsReleased && isExpired && streamClaimableEstimated > 0n;
   const canClaimRefund =
     isConnected &&
     address &&
@@ -201,6 +238,13 @@ export function CampaignDetail() {
     return () => clearInterval(interval);
   }, [deadlineNum]);
 
+  // Keep streaming claimable UI in sync (no extra RPC calls needed).
+  useEffect(() => {
+    if (!(fundsWithdrawn && !fundsReleased && streamStartTime > 0n && streamDurationSeconds > 0n)) return;
+    const t = setInterval(() => setNowSec(BigInt(Math.floor(Date.now() / 1000))), 1000);
+    return () => clearInterval(t);
+  }, [fundsWithdrawn, fundsReleased, streamStartTime, streamDurationSeconds]);
+
   useEffect(() => {
     if (!isContributeSuccess || !contributeTxHash || !campaignMeta || !contributorAddress) return;
     if (processedTxRef.current === contributeTxHash) return;
@@ -242,6 +286,14 @@ export function CampaignDetail() {
       resetWithdraw();
     }
   }, [isWithdrawSuccess, refetchChain, campaignMeta, resetWithdraw]);
+
+  useEffect(() => {
+    if (isStreamWithdrawSuccess) {
+      refetchChain();
+      if (campaignMeta) api.getCampaign(String(campaignMeta.id)).then(setCampaignMeta);
+      resetStreamWithdraw();
+    }
+  }, [isStreamWithdrawSuccess, refetchChain, campaignMeta, resetStreamWithdraw]);
 
   useEffect(() => {
     if (isFinalizeSuccess) {
@@ -295,7 +347,7 @@ export function CampaignDetail() {
   };
 
   const handleReleaseFunds = () => {
-    if (!canReleaseFunds) return;
+    if (!canStartStreaming) return;
     setContributeError(null);
     try {
       releaseFunds();
@@ -663,7 +715,7 @@ export function CampaignDetail() {
         </div>
       )}
 
-      {canReleaseFunds && (
+      {canStartStreaming && (
         <div className="mb-6">
           <button
             type="button"
@@ -671,11 +723,33 @@ export function CampaignDetail() {
             disabled={isWithdrawPending}
             className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
           >
-            {isWithdrawPending ? "Withdrawing…" : "Withdraw funds"}
+            {isWithdrawPending ? "Starting stream…" : "Start streaming"}
           </button>
           {(withdrawError || contributeError) && (
             <p className="mt-2 text-sm text-red-600">
               {getTransactionErrorMessage(withdrawError ?? contributeError)}
+            </p>
+          )}
+        </div>
+      )}
+
+      {canWithdrawStream && (
+        <div className="mb-6">
+          <button
+            type="button"
+            onClick={() => withdrawFromStream()}
+            disabled={isStreamWithdrawPending}
+            className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50"
+          >
+            {isStreamWithdrawPending ? "Withdrawing…" : "Withdraw streamed funds"}
+          </button>
+          <p className="text-xs text-gray-600 mt-2">
+            Claimable: {(Number(streamClaimableEstimated) / 1e18).toFixed(6)} ETH • Rate:{" "}
+            {(Number(streamRatePerSecond) / 1e18).toFixed(8)} ETH/s
+          </p>
+          {streamWithdrawError && (
+            <p className="mt-2 text-sm text-red-600">
+              {getTransactionErrorMessage(streamWithdrawError)}
             </p>
           )}
         </div>
@@ -763,7 +837,7 @@ export function CampaignDetail() {
         </div>
       )}
 
-      {(closed || isExpired) && !canReleaseFunds && !canClaimRefund && (
+      {(closed || isExpired) && !canStartStreaming && !canWithdrawStream && !canClaimRefund && (
         <p className="text-gray-500 mb-6">
           {goalReached
             ? "This campaign has reached its goal."

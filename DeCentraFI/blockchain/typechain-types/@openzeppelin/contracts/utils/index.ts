@@ -7,5 +7,4 @@ import type * as introspection from "./introspection";
 export type { introspection };
 import type * as structs from "./structs";
 export type { structs };
-export type { ReentrancyGuard } from "./ReentrancyGuard";
 export type { ShortStrings } from "./ShortStrings";

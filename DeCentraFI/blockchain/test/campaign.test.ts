@@ -155,41 +155,189 @@ describe("Campaign", function () {
     await expect(campaign.releaseFunds()).to.be.revertedWithCustomError(campaign, "DeadlineNotReached");
   });
 
-  it("should release funds to creator after deadline when goal met and emit FundsReleased", async function () {
+  it("should start streaming to creator after deadline when goal met", async function () {
     const amount = ethers.parseEther("10");
     await campaign.connect(contributor1).contribute({ value: amount });
     await advancePastDeadline();
-    const balanceBefore = await ethers.provider.getBalance(owner.address);
-    const tx = await campaign.releaseFunds();
-    await expect(tx).to.emit(campaign, "FundsReleased").withArgs(owner.address, amount);
-    const receipt = await tx.wait();
-    const gasUsed = receipt.gasUsed * receipt.gasPrice;
-    const balanceAfter = await ethers.provider.getBalance(owner.address);
-    expect(await ethers.provider.getBalance(campaign.target)).to.equal(0n);
-    expect(await campaign.fundsReleased()).to.be.true;
-    expect(balanceAfter).to.equal(balanceBefore + amount - gasUsed);
+
+    const contractBalanceBefore = await ethers.provider.getBalance(campaign.target);
+    const tx = await campaign.connect(owner).releaseFunds();
+
+    await expect(tx).to.emit(campaign, "StreamStarted");
+    const contractBalanceAfter = await ethers.provider.getBalance(campaign.target);
+
+    // No lump-sum transfer; funds remain in escrow until creator pulls.
+    expect(contractBalanceAfter).to.equal(contractBalanceBefore);
+    expect(await campaign.fundsWithdrawn()).to.be.true;
+    expect(await campaign.fundsReleased()).to.be.false;
+    expect(await campaign.streamTotalAmount()).to.equal(amount);
+    expect(await campaign.streamWithdrawnAmount()).to.equal(0n);
   });
 
-  it("should transfer contract balance to creator and set fundsReleased after deadline", async function () {
+  it("should stream funds pro-rata per second via withdrawFromStream", async function () {
     const amount = ethers.parseEther("10");
+    const durationSeconds = 10n;
+    const elapsedSeconds1 = 5n;
+
     await campaign.connect(contributor1).contribute({ value: amount });
     await advancePastDeadline();
+
+    const txStart = await campaign.connect(owner).startStreaming(durationSeconds);
+    await expect(txStart).to.emit(campaign, "StreamStarted");
+    const startTime = await campaign.streamStartTime();
+
+    // Advance half the duration.
+    await ethers.provider.send("evm_increaseTime", [Number(elapsedSeconds1)]);
+    await ethers.provider.send("evm_mine", []);
+
     const balanceBefore = await ethers.provider.getBalance(owner.address);
-    const tx = await campaign.releaseFunds();
-    const receipt = await tx.wait();
-    const gasUsed = receipt.gasUsed * receipt.gasPrice;
-    const balanceAfter = await ethers.provider.getBalance(owner.address);
-    expect(await ethers.provider.getBalance(campaign.target)).to.equal(0n);
-    expect(await campaign.fundsWithdrawn()).to.be.true;
+
+    const tx1 = await campaign.connect(owner).withdrawFromStream();
+    await expect(tx1).to.emit(campaign, "StreamWithdrawn");
+
+    const receipt1 = await tx1.wait();
+    const gasUsed1 = receipt1.gasUsed * receipt1.gasPrice;
+
+    const block1 = await ethers.provider.getBlock(receipt1.blockNumber);
+    const timestamp1 = BigInt(block1!.timestamp);
+    const endTime = startTime + durationSeconds;
+    const elapsed1Actual = timestamp1 < endTime ? timestamp1 - startTime : durationSeconds;
+    const expectedDue1 = (amount * elapsed1Actual) / durationSeconds;
+
+    expect(await campaign.streamWithdrawnAmount()).to.equal(expectedDue1);
+    expect(await ethers.provider.getBalance(campaign.target)).to.equal(amount - expectedDue1);
+    const balanceAfter1 = await ethers.provider.getBalance(owner.address);
+    expect(balanceAfter1).to.equal(balanceBefore + expectedDue1 - gasUsed1);
+    expect(await campaign.fundsReleased()).to.be.false;
+
+    // Advance to the end and withdraw remaining.
+    const remaining = Number(durationSeconds - elapsedSeconds1 + 1n);
+    await ethers.provider.send("evm_increaseTime", [remaining]);
+    await ethers.provider.send("evm_mine", []);
+
+    const tx2 = await campaign.connect(owner).withdrawFromStream();
+    await expect(tx2).to.emit(campaign, "FundsReleased").withArgs(owner.address, amount);
+
     expect(await campaign.fundsReleased()).to.be.true;
-    expect(balanceAfter).to.equal(balanceBefore + amount - gasUsed);
+    expect(await ethers.provider.getBalance(campaign.target)).to.equal(0n);
+    expect(await campaign.streamWithdrawnAmount()).to.equal(amount);
+  });
+
+  it("should calculate streamRatePerSecond correctly (integer division)", async function () {
+    const amount = ethers.parseEther("10");
+    const durationSeconds = 123n;
+
+    await campaign.connect(contributor1).contribute({ value: amount });
+    await advancePastDeadline();
+
+    await campaign.connect(owner).startStreaming(durationSeconds);
+
+    const expectedRate = amount / durationSeconds;
+    expect(await campaign.streamRatePerSecond()).to.equal(expectedRate);
+  });
+
+  it("should revert withdrawFromStream when claimable due rounds to zero", async function () {
+    const amount = ethers.parseEther("10"); // must reach goal to close campaign
+    const durationSeconds = 10n ** 25n; // so rate/claimable rounds to 0
+
+    await campaign.connect(contributor1).contribute({ value: amount });
+    await advancePastDeadline();
+    await campaign.connect(owner).startStreaming(durationSeconds);
+
+    // Next block should still have totalDue == 0 due to integer division.
+    await ethers.provider.send("evm_mine", []);
+
+    await expect(campaign.connect(owner).withdrawFromStream()).to.be.revertedWithCustomError(
+      campaign,
+      "NoStreamFunds"
+    );
+  });
+
+  it("should support early termination via stopStream()", async function () {
+    const amount = ethers.parseEther("10");
+    const durationSeconds = 100n;
+    const elapsedSeconds = 20n;
+
+    await campaign.connect(contributor1).contribute({ value: amount });
+    await advancePastDeadline();
+
+    await campaign.connect(owner).startStreaming(durationSeconds);
+    await ethers.provider.send("evm_increaseTime", [Number(elapsedSeconds)]);
+    await ethers.provider.send("evm_mine", []);
+
+    const stopTx = await campaign.connect(owner).stopStream();
+    await expect(stopTx).to.emit(campaign, "StreamStopped");
+
+    expect(await campaign.streamWithdrawnAmount()).to.equal(amount);
+    expect(await campaign.fundsReleased()).to.be.true;
+    expect(await ethers.provider.getBalance(campaign.target)).to.equal(0n);
+  });
+
+  it("stopStream should withdraw remaining after partial withdrawFromStream", async function () {
+    const amount = ethers.parseEther("10");
+    const durationSeconds = 100n;
+
+    await campaign.connect(contributor1).contribute({ value: amount });
+    await advancePastDeadline();
+
+    await campaign.connect(owner).startStreaming(durationSeconds);
+    await ethers.provider.send("evm_increaseTime", [30]);
+    await ethers.provider.send("evm_mine", []);
+
+    await campaign.connect(owner).withdrawFromStream();
+
+    expect(await campaign.fundsReleased()).to.be.false;
+
+    const withdrawn = await campaign.streamWithdrawnAmount();
+    const remainingExpected = amount - withdrawn;
+    const stopTx = await campaign.connect(owner).stopStream();
+    await expect(stopTx)
+      .to.emit(campaign, "StreamStopped")
+      .withArgs(owner.address, remainingExpected, amount);
+
+    expect(await campaign.streamWithdrawnAmount()).to.equal(amount);
+    expect(await campaign.fundsReleased()).to.be.true;
+    expect(await ethers.provider.getBalance(campaign.target)).to.equal(0n);
+  });
+
+  it("should prevent overlapping streams (start while active)", async function () {
+    const amount = ethers.parseEther("10");
+    const durationSeconds = 100n;
+
+    await campaign.connect(contributor1).contribute({ value: amount });
+    await advancePastDeadline();
+
+    await campaign.connect(owner).startStreaming(durationSeconds);
+
+    // Attempt to start again before the first stream ends.
+    await expect(campaign.connect(owner).startStreaming(50n)).to.be.revertedWithCustomError(
+      campaign,
+      "AlreadyWithdrawn"
+    );
+  });
+
+  it("should revert stopStream after stream end time (stream already ended)", async function () {
+    const amount = ethers.parseEther("10");
+    const durationSeconds = 10n;
+
+    await campaign.connect(contributor1).contribute({ value: amount });
+    await advancePastDeadline();
+
+    await campaign.connect(owner).startStreaming(durationSeconds);
+    await ethers.provider.send("evm_increaseTime", [Number(durationSeconds + 1n)]);
+    await ethers.provider.send("evm_mine", []);
+
+    await expect(campaign.connect(owner).stopStream()).to.be.revertedWithCustomError(
+      campaign,
+      "StreamAlreadyEnded"
+    );
   });
 
   it("should revert double release", async function () {
     await campaign.connect(contributor1).contribute({ value: ethers.parseEther("10") });
     await advancePastDeadline();
-    await campaign.releaseFunds();
-    await expect(campaign.releaseFunds()).to.be.revertedWithCustomError(campaign, "AlreadyWithdrawn");
+    await campaign.connect(owner).releaseFunds();
+    await expect(campaign.connect(owner).releaseFunds()).to.be.revertedWithCustomError(campaign, "AlreadyWithdrawn");
   });
 
   // --- finalizeAfterDeadline & claimRefund ---

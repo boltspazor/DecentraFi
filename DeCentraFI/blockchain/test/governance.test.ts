@@ -311,7 +311,8 @@ describe("DAO Governance (Governor + Timelock)", function () {
     await ethers.provider.send("evm_increaseTime", [65]);
     await ethers.provider.send("evm_mine", []);
 
-    const calldataRelease = campaign.interface.encodeFunctionData("daoReleaseFunds", []);
+    const streamDurationSeconds = 10n; // keep test fast
+    const calldataRelease = campaign.interface.encodeFunctionData("daoStartStreaming", [streamDurationSeconds]);
     const description2 = "Verify campaign and release escrow funds";
 
     const proposeTx2 = await governor.propose(
@@ -334,7 +335,6 @@ describe("DAO Governance (Governor + Timelock)", function () {
     await ethers.provider.send("evm_increaseTime", [2]);
     await ethers.provider.send("evm_mine", []);
 
-    const creatorBalBefore = await ethers.provider.getBalance(deployer.address);
     const exec2 = await governor.execute(
       [campaign.target, campaign.target],
       [0, 0],
@@ -342,12 +342,27 @@ describe("DAO Governance (Governor + Timelock)", function () {
       descHash2
     );
     const rc2 = await exec2.wait();
-    const gasUsed2 = rc2.gasUsed * rc2.gasPrice;
-    const creatorBalAfter = await ethers.provider.getBalance(deployer.address);
 
     expect(await campaign.isVerified()).to.equal(true);
+
+    // DAO starts the stream; funds are not transferred lump-sum.
+    expect(await campaign.fundsWithdrawn()).to.equal(true);
+    expect(await campaign.fundsReleased()).to.equal(false);
+    expect(await ethers.provider.getBalance(campaign.target)).to.equal(goal);
+
+    // Advance to the end of the stream and let creator pull the remaining escrow.
+    await ethers.provider.send("evm_increaseTime", [Number(streamDurationSeconds + 1n)]);
+    await ethers.provider.send("evm_mine", []);
+
+    const creatorBalBeforeWithdraw = await ethers.provider.getBalance(deployer.address);
+    const txWithdraw = await campaign.connect(deployer).withdrawFromStream();
+    const rcWithdraw = await txWithdraw.wait();
+    const gasUsedWithdraw = rcWithdraw.gasUsed * rcWithdraw.gasPrice;
+    const creatorBalAfterWithdraw = await ethers.provider.getBalance(deployer.address);
+
+    expect(await campaign.fundsReleased()).to.equal(true);
     expect(await ethers.provider.getBalance(campaign.target)).to.equal(0n);
-    expect(creatorBalAfter).to.equal(creatorBalBefore + goal - gasUsed2);
+    expect(creatorBalAfterWithdraw).to.equal(creatorBalBeforeWithdraw + goal - gasUsedWithdraw);
   });
 });
 
