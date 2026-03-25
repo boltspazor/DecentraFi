@@ -554,5 +554,86 @@ describe("FundingPoolHome (multi-chain option A)", function () {
     expect(await pool.escrowBalance(campaignId)).to.equal(0n);
     expect((await pool.campaigns(campaignId)).fundsReleased).to.equal(true);
   });
+
+  it("token minting per contribution", async function () {
+    const goal = ethers.parseEther("10");
+    const campaignId = await createGoalCampaign({ goalWei: goal, deadlineOffsetSeconds: 100 });
+
+    const amount = ethers.parseEther("3");
+    await pool.connect(contributor).contribute(campaignId, { value: amount });
+
+    const tokenAddr = await pool.shareTokenByCampaign(campaignId);
+    const Share = await ethers.getContractAt("InvestmentShareToken", tokenAddr);
+
+    expect(await Share.balanceOf(contributor.address)).to.equal(amount);
+    expect(await Share.totalSupply()).to.equal(amount);
+  });
+
+  it("correct share distribution across multiple contributors", async function () {
+    const signers = await ethers.getSigners();
+    const other = signers[3];
+
+    const goal = ethers.parseEther("20");
+    const campaignId = await createGoalCampaign({ goalWei: goal, deadlineOffsetSeconds: 100 });
+
+    const a1 = ethers.parseEther("5");
+    const a2 = ethers.parseEther("7");
+
+    await pool.connect(contributor).contribute(campaignId, { value: a1 });
+    await pool.connect(other).contribute(campaignId, { value: a2 });
+
+    const tokenAddr = await pool.shareTokenByCampaign(campaignId);
+    const Share = await ethers.getContractAt("InvestmentShareToken", tokenAddr);
+
+    expect(await Share.balanceOf(contributor.address)).to.equal(a1);
+    expect(await Share.balanceOf(other.address)).to.equal(a2);
+    expect(await Share.totalSupply()).to.equal(a1 + a2);
+  });
+
+  it("prevents over-minting via external calls", async function () {
+    const goal = ethers.parseEther("10");
+    const campaignId = await createGoalCampaign({ goalWei: goal, deadlineOffsetSeconds: 100 });
+
+    const tokenAddr = await pool.shareTokenByCampaign(campaignId);
+    const Share = await ethers.getContractAt("InvestmentShareToken", tokenAddr);
+
+    await expect(Share.connect(contributor).mint(contributor.address, 1n)).to.be.revertedWithCustomError(
+      Share,
+      "NotMinter"
+    );
+  });
+
+  it("reverts zero contribution (and does not mint shares)", async function () {
+    const goal = ethers.parseEther("10");
+    const campaignId = await createGoalCampaign({ goalWei: goal, deadlineOffsetSeconds: 100 });
+
+    await expect(pool.connect(contributor).contribute(campaignId, { value: 0 })).to.be.revertedWithCustomError(
+      pool,
+      "NoContribution"
+    );
+
+    const tokenAddr = await pool.shareTokenByCampaign(campaignId);
+    const Share = await ethers.getContractAt("InvestmentShareToken", tokenAddr);
+    expect(await Share.totalSupply()).to.equal(0n);
+  });
+
+  it("transfer restrictions: share transfers are disabled", async function () {
+    const signers = await ethers.getSigners();
+    const other = signers[3];
+
+    const goal = ethers.parseEther("10");
+    const campaignId = await createGoalCampaign({ goalWei: goal, deadlineOffsetSeconds: 100 });
+
+    const amount = ethers.parseEther("1");
+    await pool.connect(contributor).contribute(campaignId, { value: amount });
+
+    const tokenAddr = await pool.shareTokenByCampaign(campaignId);
+    const Share = await ethers.getContractAt("InvestmentShareToken", tokenAddr);
+
+    await expect(Share.connect(contributor).transfer(other.address, 1n)).to.be.revertedWithCustomError(
+      Share,
+      "TransfersDisabled"
+    );
+  });
 });
 

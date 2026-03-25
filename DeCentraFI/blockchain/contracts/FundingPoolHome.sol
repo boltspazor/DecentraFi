@@ -3,6 +3,8 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
+import "./InvestmentShareToken.sol";
+
 // Minimal LayerZero endpoint interface (send only).
 interface ILayerZeroEndpoint {
     function send(
@@ -101,6 +103,9 @@ contract FundingPoolHome is ReentrancyGuard {
     uint256 public nextCampaignId = 1;
     mapping(uint256 => Campaign) public campaigns;
 
+    // campaignId => ERC20 investment shares (non-transferable).
+    mapping(uint256 => address) public shareTokenByCampaign;
+
     // campaignId => contributor => amount
     mapping(uint256 => mapping(address => uint256)) public contributions;
     // campaignId => nullifier => amount (anonymous donation accounting)
@@ -192,6 +197,16 @@ contract FundingPoolHome is ReentrancyGuard {
             exists: true
         });
 
+        // Deploy a dedicated, non-transferable share token for this campaign.
+        // Tokens are minted 1:1 with contributed wei and burned on refund.
+        InvestmentShareToken token = new InvestmentShareToken(
+            address(this),
+            campaignId,
+            "DecentraFI Investment Share",
+            "DIFS"
+        );
+        shareTokenByCampaign[campaignId] = address(token);
+
         emit CampaignCreated(campaignId, msg.sender, goalWei, deadline);
     }
 
@@ -210,6 +225,9 @@ contract FundingPoolHome is ReentrancyGuard {
         }
 
         escrowBalance[campaignId] += msg.value;
+
+        // Mint investment shares for this contribution.
+        InvestmentShareToken(shareTokenByCampaign[campaignId]).mint(msg.sender, msg.value);
         emit ContributionReceived(msg.sender, msg.value, campaignId, block.chainid);
     }
 
@@ -266,6 +284,9 @@ contract FundingPoolHome is ReentrancyGuard {
         }
 
         escrowBalance[campaignId] += amount;
+
+        // Mint shares credited to the contributor wallet on the home chain.
+        InvestmentShareToken(shareTokenByCampaign[campaignId]).mint(contributor, amount);
         emit ContributionReceived(contributor, amount, campaignId, originChainId);
     }
 
@@ -444,6 +465,9 @@ contract FundingPoolHome is ReentrancyGuard {
         c.totalContributed -= amount;
         c.totalRaised = c.totalContributed;
         escrowBalance[campaignId] -= amount;
+
+        // Burn shares as the contributor exits.
+        InvestmentShareToken(shareTokenByCampaign[campaignId]).burn(msg.sender, amount);
 
         (bool ok,) = payable(msg.sender).call{value: amount}("");
         if (!ok) revert TransferFailed();

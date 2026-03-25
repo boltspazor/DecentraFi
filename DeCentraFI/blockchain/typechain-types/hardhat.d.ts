@@ -186,6 +186,10 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.ISemaphore__factory>;
     getContractFactory(
+      name: "InvestmentShareToken",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.InvestmentShareToken__factory>;
+    getContractFactory(
       name: "ILzReceiver",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.ILzReceiver__factory>;
@@ -422,6 +426,11 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.ISemaphore>;
     getContractAt(
+      name: "InvestmentShareToken",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.InvestmentShareToken>;
+    getContractAt(
       name: "ILzReceiver",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
@@ -620,6 +629,10 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.ISemaphore>;
     deployContract(
+      name: "InvestmentShareToken",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.InvestmentShareToken>;
+    deployContract(
       name: "ILzReceiver",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.ILzReceiver>;
@@ -855,6 +868,11 @@ declare module "hardhat/types/runtime" {
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.ISemaphore>;
+    deployContract(
+      name: "InvestmentShareToken",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.InvestmentShareToken>;
     deployContract(
       name: "ILzReceiver",
       args: any[],

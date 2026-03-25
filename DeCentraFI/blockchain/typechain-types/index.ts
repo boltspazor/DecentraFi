@@ -90,6 +90,8 @@ export type { FundingPoolHome } from "./contracts/FundingPoolHome.sol/FundingPoo
 export { FundingPoolHome__factory } from "./factories/contracts/FundingPoolHome.sol/FundingPoolHome__factory";
 export type { ISemaphore } from "./contracts/FundingPoolHome.sol/ISemaphore";
 export { ISemaphore__factory } from "./factories/contracts/FundingPoolHome.sol/ISemaphore__factory";
+export type { InvestmentShareToken } from "./contracts/InvestmentShareToken";
+export { InvestmentShareToken__factory } from "./factories/contracts/InvestmentShareToken__factory";
 export type { ILzReceiver } from "./contracts/MockLayerZeroEndpoint.sol/ILzReceiver";
 export { ILzReceiver__factory } from "./factories/contracts/MockLayerZeroEndpoint.sol/ILzReceiver__factory";
 export type { MockLayerZeroEndpoint } from "./contracts/MockLayerZeroEndpoint.sol/MockLayerZeroEndpoint";

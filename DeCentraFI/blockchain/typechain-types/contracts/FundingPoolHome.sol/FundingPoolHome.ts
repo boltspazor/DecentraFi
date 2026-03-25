@@ -77,6 +77,7 @@ export interface FundingPoolHomeInterface extends Interface {
       | "semaphoreVerifier"
       | "setSemaphore"
       | "setTrustedRemote"
+      | "shareTokenByCampaign"
       | "startStreaming"
       | "stopStream"
       | "streamClaimable"
@@ -193,6 +194,10 @@ export interface FundingPoolHomeInterface extends Interface {
   encodeFunctionData(
     functionFragment: "setTrustedRemote",
     values: [BigNumberish, BytesLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "shareTokenByCampaign",
+    values: [BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "startStreaming",
@@ -322,6 +327,10 @@ export interface FundingPoolHomeInterface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "setTrustedRemote",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "shareTokenByCampaign",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -786,6 +795,12 @@ export interface FundingPoolHome extends BaseContract {
     "nonpayable"
   >;
 
+  shareTokenByCampaign: TypedContractMethod<
+    [arg0: BigNumberish],
+    [string],
+    "view"
+  >;
+
   startStreaming: TypedContractMethod<
     [campaignId: BigNumberish, durationSeconds: BigNumberish],
     [void],
@@ -1009,6 +1024,9 @@ export interface FundingPoolHome extends BaseContract {
     [void],
     "nonpayable"
   >;
+  getFunction(
+    nameOrSignature: "shareTokenByCampaign"
+  ): TypedContractMethod<[arg0: BigNumberish], [string], "view">;
   getFunction(
     nameOrSignature: "startStreaming"
   ): TypedContractMethod<
