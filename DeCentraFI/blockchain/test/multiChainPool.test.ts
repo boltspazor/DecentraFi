@@ -4,14 +4,18 @@ const { ethers } = require("hardhat");
 describe("FundingPoolHome (multi-chain option A)", function () {
   let endpoint;
   let pool;
-  let gateway;
+  let gateway1;
+  let gateway2;
 
   let owner;
   let creator;
   let contributor;
 
   const srcChainId = 101; // mock remote chain id (LayerZero srcChainId)
+  const srcChainId2 = 102;
   let trustedSrcAddressBytes;
+  let trustedSrcAddressBytes2;
+  let nextNonce;
 
   async function advancePastDeadline(seconds) {
     await ethers.provider.send("evm_increaseTime", [seconds]);
@@ -34,11 +38,17 @@ describe("FundingPoolHome (multi-chain option A)", function () {
     const destinationBytes = ethers.solidityPacked(["address"], [homePool]);
 
     const Gateway = await ethers.getContractFactory("FundingGateway");
-    gateway = await Gateway.deploy(await endpoint.getAddress(), dstChainId, homePool, destinationBytes, "0x");
-    await gateway.waitForDeployment();
+    gateway1 = await Gateway.deploy(await endpoint.getAddress(), dstChainId, homePool, destinationBytes, "0x");
+    await gateway1.waitForDeployment();
 
-    trustedSrcAddressBytes = ethers.solidityPacked(["address"], [await gateway.getAddress()]);
+    gateway2 = await Gateway.deploy(await endpoint.getAddress(), dstChainId, homePool, destinationBytes, "0x");
+    await gateway2.waitForDeployment();
+
+    trustedSrcAddressBytes = ethers.solidityPacked(["address"], [await gateway1.getAddress()]);
+    trustedSrcAddressBytes2 = ethers.solidityPacked(["address"], [await gateway2.getAddress()]);
     await pool.connect(owner).setTrustedRemote(srcChainId, trustedSrcAddressBytes);
+    await pool.connect(owner).setTrustedRemote(srcChainId2, trustedSrcAddressBytes2);
+    nextNonce = 1;
   });
 
   async function createGoalCampaign({ goalWei, deadlineOffsetSeconds }) {
@@ -50,7 +60,16 @@ describe("FundingPoolHome (multi-chain option A)", function () {
     return nextId;
   }
 
-  async function simulateCrossChainDeposit({ campaignId, contributorAddr, amountWei }) {
+  async function simulateCrossChainDeposit({
+    campaignId,
+    contributorAddr,
+    amountWei,
+    nonce,
+    gateway,
+    srcChainId: srcId,
+    srcAddressBytes,
+    triggerValueOverride,
+  }) {
     const tx = await gateway.connect(contributor).deposit(campaignId, { value: amountWei });
     await tx.wait();
 
@@ -60,25 +79,41 @@ describe("FundingPoolHome (multi-chain option A)", function () {
     // Endpoint calls lzReceive on pool (msg.sender == endpoint address).
     const triggerTx = await endpoint.triggerLzReceive(
       await pool.getAddress(),
-      srcChainId,
-      trustedSrcAddressBytes,
-      0,
+      srcId,
+      srcAddressBytes,
+      nonce ?? nextNonce,
       payload,
-      { value }
+      { value: triggerValueOverride ?? value }
     );
     await triggerTx.wait();
+
+    if (nonce === undefined) nextNonce += 1;
   }
 
   it("credits cross-chain deposits and marks campaign closed at goal", async function () {
     const goal = ethers.parseEther("10");
     const campaignId = await createGoalCampaign({ goalWei: goal, deadlineOffsetSeconds: 100 });
 
-    await simulateCrossChainDeposit({ campaignId, contributorAddr: contributor.address, amountWei: ethers.parseEther("6") });
+    await simulateCrossChainDeposit({
+      campaignId,
+      contributorAddr: contributor.address,
+      amountWei: ethers.parseEther("6"),
+      gateway: gateway1,
+      srcChainId: srcChainId,
+      srcAddressBytes: trustedSrcAddressBytes,
+    });
     let c = await pool.campaigns(campaignId);
     expect(c.totalRaised).to.equal(ethers.parseEther("6"));
     expect(c.closed).to.equal(false);
 
-    await simulateCrossChainDeposit({ campaignId, contributorAddr: contributor.address, amountWei: ethers.parseEther("4") });
+    await simulateCrossChainDeposit({
+      campaignId,
+      contributorAddr: contributor.address,
+      amountWei: ethers.parseEther("4"),
+      gateway: gateway1,
+      srcChainId: srcChainId,
+      srcAddressBytes: trustedSrcAddressBytes,
+    });
     c = await pool.campaigns(campaignId);
     expect(c.totalRaised).to.equal(ethers.parseEther("10"));
     expect(c.closed).to.equal(true);
@@ -88,7 +123,14 @@ describe("FundingPoolHome (multi-chain option A)", function () {
     const goal = ethers.parseEther("10");
     const campaignId = await createGoalCampaign({ goalWei: goal, deadlineOffsetSeconds: 30 });
 
-    await simulateCrossChainDeposit({ campaignId, contributorAddr: contributor.address, amountWei: ethers.parseEther("10") });
+    await simulateCrossChainDeposit({
+      campaignId,
+      contributorAddr: contributor.address,
+      amountWei: ethers.parseEther("10"),
+      gateway: gateway1,
+      srcChainId: srcChainId,
+      srcAddressBytes: trustedSrcAddressBytes,
+    });
 
     // After deadline, start streaming.
     await advancePastDeadline(31);
@@ -112,7 +154,14 @@ describe("FundingPoolHome (multi-chain option A)", function () {
     const goal = ethers.parseEther("10");
     const campaignId = await createGoalCampaign({ goalWei: goal, deadlineOffsetSeconds: 10 });
 
-    await simulateCrossChainDeposit({ campaignId, contributorAddr: contributor.address, amountWei: goal });
+    await simulateCrossChainDeposit({
+      campaignId,
+      contributorAddr: contributor.address,
+      amountWei: goal,
+      gateway: gateway1,
+      srcChainId: srcChainId,
+      srcAddressBytes: trustedSrcAddressBytes,
+    });
 
     await advancePastDeadline(11);
 
@@ -148,7 +197,14 @@ describe("FundingPoolHome (multi-chain option A)", function () {
     const goal = ethers.parseEther("1");
     const campaignId = await createGoalCampaign({ goalWei: goal, deadlineOffsetSeconds: 10 });
 
-    await simulateCrossChainDeposit({ campaignId, contributorAddr: contributor.address, amountWei: goal });
+    await simulateCrossChainDeposit({
+      campaignId,
+      contributorAddr: contributor.address,
+      amountWei: goal,
+      gateway: gateway1,
+      srcChainId: srcChainId,
+      srcAddressBytes: trustedSrcAddressBytes,
+    });
     await advancePastDeadline(11);
 
     // huge duration => integer division rounds down to zero claimable at small elapsed time
@@ -166,7 +222,14 @@ describe("FundingPoolHome (multi-chain option A)", function () {
     const goal = ethers.parseEther("10");
     const campaignId = await createGoalCampaign({ goalWei: goal, deadlineOffsetSeconds: 10 });
 
-    await simulateCrossChainDeposit({ campaignId, contributorAddr: contributor.address, amountWei: goal });
+    await simulateCrossChainDeposit({
+      campaignId,
+      contributorAddr: contributor.address,
+      amountWei: goal,
+      gateway: gateway1,
+      srcChainId: srcChainId,
+      srcAddressBytes: trustedSrcAddressBytes,
+    });
     await advancePastDeadline(11);
 
     const duration = 100n;
@@ -195,7 +258,14 @@ describe("FundingPoolHome (multi-chain option A)", function () {
     const goal = ethers.parseEther("10");
     const campaignId = await createGoalCampaign({ goalWei: goal, deadlineOffsetSeconds: 10 });
 
-    await simulateCrossChainDeposit({ campaignId, contributorAddr: contributor.address, amountWei: goal });
+    await simulateCrossChainDeposit({
+      campaignId,
+      contributorAddr: contributor.address,
+      amountWei: goal,
+      gateway: gateway1,
+      srcChainId: srcChainId,
+      srcAddressBytes: trustedSrcAddressBytes,
+    });
     await advancePastDeadline(11);
 
     const duration = 100n;
@@ -211,7 +281,14 @@ describe("FundingPoolHome (multi-chain option A)", function () {
     const goal = ethers.parseEther("10");
     const campaignId = await createGoalCampaign({ goalWei: goal, deadlineOffsetSeconds: 10 });
 
-    await simulateCrossChainDeposit({ campaignId, contributorAddr: contributor.address, amountWei: goal });
+    await simulateCrossChainDeposit({
+      campaignId,
+      contributorAddr: contributor.address,
+      amountWei: goal,
+      gateway: gateway1,
+      srcChainId: srcChainId,
+      srcAddressBytes: trustedSrcAddressBytes,
+    });
     await advancePastDeadline(11);
 
     const duration = 10n;
@@ -222,6 +299,112 @@ describe("FundingPoolHome (multi-chain option A)", function () {
       pool,
       "StreamAlreadyEnded"
     );
+  });
+
+  it("unified balance tracking across multiple chains", async function () {
+    const goal = ethers.parseEther("10");
+    const campaignId = await createGoalCampaign({ goalWei: goal, deadlineOffsetSeconds: 50 });
+
+    await simulateCrossChainDeposit({
+      campaignId,
+      contributorAddr: contributor.address,
+      amountWei: ethers.parseEther("6"),
+      gateway: gateway1,
+      srcChainId: srcChainId,
+      srcAddressBytes: trustedSrcAddressBytes,
+    });
+    await simulateCrossChainDeposit({
+      campaignId,
+      contributorAddr: contributor.address,
+      amountWei: ethers.parseEther("4"),
+      gateway: gateway2,
+      srcChainId: srcChainId2,
+      srcAddressBytes: trustedSrcAddressBytes2,
+    });
+
+    expect((await pool.campaigns(campaignId)).totalRaised).to.equal(goal);
+    expect((await pool.campaigns(campaignId)).closed).to.equal(true);
+    expect(await pool.escrowBalance(campaignId)).to.equal(goal);
+    expect(await pool.contributions(campaignId, contributor.address)).to.equal(goal);
+  });
+
+  it("reverts when source chain address bytes don't match trusted remote (chain mismatch)", async function () {
+    const goal = ethers.parseEther("10");
+    const campaignId = await createGoalCampaign({ goalWei: goal, deadlineOffsetSeconds: 50 });
+    const amount = ethers.parseEther("6");
+
+    // Produce a payload from gateway1 deposit.
+    await (await gateway1.connect(contributor).deposit(campaignId, { value: amount })).wait();
+    const payload = await endpoint.lastPayload();
+    const value = await endpoint.lastValue();
+
+    await expect(
+      endpoint.triggerLzReceive(
+        await pool.getAddress(),
+        srcChainId,
+        trustedSrcAddressBytes2, // mismatch srcAddress bytes
+        999,
+        payload,
+        { value }
+      )
+    ).to.be.revertedWith("Untrusted remote");
+
+    expect(await pool.escrowBalance(campaignId)).to.equal(0n);
+  });
+
+  it("reverts when bridged value doesn't match payload amount (failed bridge simulation)", async function () {
+    const goal = ethers.parseEther("10");
+    const campaignId = await createGoalCampaign({ goalWei: goal, deadlineOffsetSeconds: 50 });
+    const amount = ethers.parseEther("6");
+
+    await (await gateway1.connect(contributor).deposit(campaignId, { value: amount })).wait();
+    const payload = await endpoint.lastPayload();
+    const value = await endpoint.lastValue();
+
+    await expect(
+      endpoint.triggerLzReceive(
+        await pool.getAddress(),
+        srcChainId,
+        trustedSrcAddressBytes,
+        888,
+        payload,
+        { value: value - 1n } // wrong bridged value
+      )
+    ).to.be.revertedWith("Mismatched bridged value");
+
+    expect(await pool.escrowBalance(campaignId)).to.equal(0n);
+  });
+
+  it("reverts duplicate LayerZero message delivery (duplicate tx)", async function () {
+    const goal = ethers.parseEther("10");
+    const campaignId = await createGoalCampaign({ goalWei: goal, deadlineOffsetSeconds: 50 });
+    const amount = ethers.parseEther("6");
+
+    await (await gateway1.connect(contributor).deposit(campaignId, { value: amount })).wait();
+    const payload = await endpoint.lastPayload();
+    const value = await endpoint.lastValue();
+
+    const nonce = 777;
+
+    await (await endpoint.triggerLzReceive(
+      await pool.getAddress(),
+      srcChainId,
+      trustedSrcAddressBytes,
+      nonce,
+      payload,
+      { value }
+    )).wait();
+
+    await expect(
+      endpoint.triggerLzReceive(
+        await pool.getAddress(),
+        srcChainId,
+        trustedSrcAddressBytes,
+        nonce,
+        payload,
+        { value }
+      )
+    ).to.be.revertedWithCustomError(pool, "DuplicateDeposit");
   });
 });
 

@@ -39,6 +39,7 @@ export interface FundingPoolHomeInterface extends Interface {
       | "lzReceive"
       | "nextCampaignId"
       | "owner"
+      | "processedNonces"
       | "releaseFunds"
       | "setTrustedRemote"
       | "startStreaming"
@@ -112,6 +113,10 @@ export interface FundingPoolHomeInterface extends Interface {
     values?: undefined
   ): string;
   encodeFunctionData(functionFragment: "owner", values?: undefined): string;
+  encodeFunctionData(
+    functionFragment: "processedNonces",
+    values: [BigNumberish, BytesLike, BigNumberish]
+  ): string;
   encodeFunctionData(
     functionFragment: "releaseFunds",
     values: [BigNumberish]
@@ -206,6 +211,10 @@ export interface FundingPoolHomeInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "processedNonces",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(
     functionFragment: "releaseFunds",
     data: BytesLike
@@ -560,7 +569,7 @@ export interface FundingPoolHome extends BaseContract {
     [
       _srcChainId: BigNumberish,
       _srcAddress: BytesLike,
-      arg2: BigNumberish,
+      _nonce: BigNumberish,
       _payload: BytesLike
     ],
     [void],
@@ -570,6 +579,12 @@ export interface FundingPoolHome extends BaseContract {
   nextCampaignId: TypedContractMethod<[], [bigint], "view">;
 
   owner: TypedContractMethod<[], [string], "view">;
+
+  processedNonces: TypedContractMethod<
+    [arg0: BigNumberish, arg1: BytesLike, arg2: BigNumberish],
+    [boolean],
+    "view"
+  >;
 
   releaseFunds: TypedContractMethod<
     [campaignId: BigNumberish],
@@ -729,7 +744,7 @@ export interface FundingPoolHome extends BaseContract {
     [
       _srcChainId: BigNumberish,
       _srcAddress: BytesLike,
-      arg2: BigNumberish,
+      _nonce: BigNumberish,
       _payload: BytesLike
     ],
     [void],
@@ -741,6 +756,13 @@ export interface FundingPoolHome extends BaseContract {
   getFunction(
     nameOrSignature: "owner"
   ): TypedContractMethod<[], [string], "view">;
+  getFunction(
+    nameOrSignature: "processedNonces"
+  ): TypedContractMethod<
+    [arg0: BigNumberish, arg1: BytesLike, arg2: BigNumberish],
+    [boolean],
+    "view"
+  >;
   getFunction(
     nameOrSignature: "releaseFunds"
   ): TypedContractMethod<[campaignId: BigNumberish], [void], "nonpayable">;

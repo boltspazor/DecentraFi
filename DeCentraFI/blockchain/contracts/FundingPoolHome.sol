@@ -32,6 +32,10 @@ contract FundingPoolHome is ReentrancyGuard {
     // srcChainId => srcAddress bytes (gateway address encoded as bytes in LZ payload/path)
     mapping(uint16 => bytes) public trustedRemoteLookup;
 
+    // Prevent processing the same LayerZero message more than once.
+    // lz uses (srcChainId, srcAddress, nonce) as a unique message identifier.
+    mapping(uint16 => mapping(bytes32 => mapping(uint64 => bool))) public processedNonces;
+
     modifier onlyOwner() {
         require(msg.sender == owner, "Not owner");
         _;
@@ -129,6 +133,7 @@ contract FundingPoolHome is ReentrancyGuard {
     error StreamAlreadyEnded();
     error CampaignNotFound();
     error GoalNotReached();
+    error DuplicateDeposit();
 
     // ---- Campaign lifecycle: create + local contribute ----
     function createCampaign(uint256 goalWei, uint256 deadline) external returns (uint256 campaignId) {
@@ -202,7 +207,7 @@ contract FundingPoolHome is ReentrancyGuard {
     function lzReceive(
         uint16 _srcChainId,
         bytes calldata _srcAddress,
-        uint64 /* _nonce */,
+        uint64 _nonce,
         bytes calldata _payload
     ) external payable nonReentrant {
         require(msg.sender == endpoint, "Invalid endpoint");
@@ -213,6 +218,11 @@ contract FundingPoolHome is ReentrancyGuard {
             abi.decode(_payload, (uint256, address, uint256, uint256));
 
         require(msg.value == amount, "Mismatched bridged value");
+
+        bytes32 srcAddrHash = keccak256(_srcAddress);
+        if (processedNonces[_srcChainId][srcAddrHash][_nonce]) revert DuplicateDeposit();
+        processedNonces[_srcChainId][srcAddrHash][_nonce] = true;
+
         _contributeFromRemote(campaignId, contributor, amount, originChainId);
     }
 
