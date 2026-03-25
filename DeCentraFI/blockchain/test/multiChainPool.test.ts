@@ -427,7 +427,7 @@ describe("FundingPoolHome (multi-chain option A)", function () {
     ).to.be.revertedWithCustomError(pool, "DuplicateDeposit");
   });
 
-  it("accepts anonymous donations with valid Semaphore proof (and does not store contributor address)", async function () {
+  it("anonymous contribution success", async function () {
     const goal = ethers.parseEther("10");
     const campaignId = await createGoalCampaign({ goalWei: goal, deadlineOffsetSeconds: 100 });
 
@@ -446,9 +446,31 @@ describe("FundingPoolHome (multi-chain option A)", function () {
     // Contributor address must not be credited in the public contributions mapping.
     expect(await pool.contributions(campaignId, contributor.address)).to.equal(0n);
     expect(await pool.anonymousContributions(campaignId, nullifier)).to.equal(amount);
+    expect(await pool.escrowBalance(campaignId)).to.equal(amount);
   });
 
-  it("reverts anonymous donation with invalid Semaphore proof", async function () {
+  it("proof verification", async function () {
+    // New pool instance without Semaphore configured should reject proof-bearing anon donations.
+    const Pool = await ethers.getContractFactory("FundingPoolHome");
+    const unconfiguredPool = await Pool.deploy(await endpoint.getAddress());
+    await unconfiguredPool.waitForDeployment();
+
+    const goal = ethers.parseEther("10");
+    const deadline = (await ethers.provider.getBlock("latest")).timestamp + 100;
+    const nextId = await unconfiguredPool.nextCampaignId();
+    await (await unconfiguredPool.connect(creator).createCampaign(goal, deadline)).wait();
+    const campaignId = nextId;
+
+    const amount = ethers.parseEther("1");
+    const nullifier = 9999n;
+    const proof = makeProof({ nullifier, message: validSemaphoreMessage });
+
+    await expect(
+      unconfiguredPool.connect(contributor).contributeAnon(campaignId, amount, proof, { value: amount })
+    ).to.be.revertedWithCustomError(unconfiguredPool, "SemaphoreNotConfigured");
+  });
+
+  it("invalid proof", async function () {
     const goal = ethers.parseEther("10");
     const campaignId = await createGoalCampaign({ goalWei: goal, deadlineOffsetSeconds: 100 });
 
@@ -460,7 +482,7 @@ describe("FundingPoolHome (multi-chain option A)", function () {
     ).to.be.revertedWithCustomError(pool, "InvalidSemaphoreProof");
   });
 
-  it("reverts duplicate anonymous donations (same nullifier)", async function () {
+  it("replay attacks", async function () {
     const goal = ethers.parseEther("10");
     const campaignId = await createGoalCampaign({ goalWei: goal, deadlineOffsetSeconds: 100 });
 
@@ -468,14 +490,15 @@ describe("FundingPoolHome (multi-chain option A)", function () {
     const nullifier = 333n;
     const proof = makeProof({ nullifier, message: validSemaphoreMessage });
 
-    await pool.connect(contributor).contributeAnon(campaignId, amount, proof, { value: amount });
+    const [, , , attacker] = await ethers.getSigners();
+    await pool.connect(attacker).contributeAnon(campaignId, amount, proof, { value: amount });
 
     await expect(
       pool.connect(contributor).contributeAnon(campaignId, amount, proof, { value: amount })
     ).to.be.revertedWithCustomError(pool, "DuplicateAnonNullifier");
   });
 
-  it("anonymous refunds: works after deadline when goal not met", async function () {
+  it("double spend", async function () {
     const goal = ethers.parseEther("10");
     const campaignId = await createGoalCampaign({ goalWei: goal, deadlineOffsetSeconds: 5 });
 
@@ -498,7 +521,7 @@ describe("FundingPoolHome (multi-chain option A)", function () {
     expect(cAfter.totalContributed).to.equal(0n);
     expect(await pool.escrowBalance(campaignId)).to.equal(0n);
 
-    // Same proof/nullifier cannot be refunded twice.
+    // Same proof/nullifier cannot be refunded twice (prevents double spend of refund).
     await expect(pool.connect(contributor).claimRefundAnon(campaignId, proof))
       .to.be.revertedWithCustomError(pool, "NoContribution");
   });
