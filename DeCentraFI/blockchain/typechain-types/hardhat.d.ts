@@ -166,6 +166,30 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.DecentraFiTimelock__factory>;
     getContractFactory(
+      name: "FundingGateway",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.FundingGateway__factory>;
+    getContractFactory(
+      name: "ILayerZeroEndpoint",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.ILayerZeroEndpoint__factory>;
+    getContractFactory(
+      name: "FundingPoolHome",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.FundingPoolHome__factory>;
+    getContractFactory(
+      name: "ILayerZeroEndpoint",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.ILayerZeroEndpoint__factory>;
+    getContractFactory(
+      name: "ILzReceiver",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.ILzReceiver__factory>;
+    getContractFactory(
+      name: "MockLayerZeroEndpoint",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.MockLayerZeroEndpoint__factory>;
+    getContractFactory(
       name: "PlatformConfig",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.PlatformConfig__factory>;
@@ -365,6 +389,36 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.DecentraFiTimelock>;
     getContractAt(
+      name: "FundingGateway",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.FundingGateway>;
+    getContractAt(
+      name: "ILayerZeroEndpoint",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.ILayerZeroEndpoint>;
+    getContractAt(
+      name: "FundingPoolHome",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.FundingPoolHome>;
+    getContractAt(
+      name: "ILayerZeroEndpoint",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.ILayerZeroEndpoint>;
+    getContractAt(
+      name: "ILzReceiver",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.ILzReceiver>;
+    getContractAt(
+      name: "MockLayerZeroEndpoint",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.MockLayerZeroEndpoint>;
+    getContractAt(
       name: "PlatformConfig",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
@@ -528,6 +582,30 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.DecentraFiTimelock>;
     deployContract(
+      name: "FundingGateway",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.FundingGateway>;
+    deployContract(
+      name: "ILayerZeroEndpoint",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.ILayerZeroEndpoint>;
+    deployContract(
+      name: "FundingPoolHome",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.FundingPoolHome>;
+    deployContract(
+      name: "ILayerZeroEndpoint",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.ILayerZeroEndpoint>;
+    deployContract(
+      name: "ILzReceiver",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.ILzReceiver>;
+    deployContract(
+      name: "MockLayerZeroEndpoint",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.MockLayerZeroEndpoint>;
+    deployContract(
       name: "PlatformConfig",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.PlatformConfig>;
@@ -726,6 +804,36 @@ declare module "hardhat/types/runtime" {
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.DecentraFiTimelock>;
+    deployContract(
+      name: "FundingGateway",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.FundingGateway>;
+    deployContract(
+      name: "ILayerZeroEndpoint",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.ILayerZeroEndpoint>;
+    deployContract(
+      name: "FundingPoolHome",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.FundingPoolHome>;
+    deployContract(
+      name: "ILayerZeroEndpoint",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.ILayerZeroEndpoint>;
+    deployContract(
+      name: "ILzReceiver",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.ILzReceiver>;
+    deployContract(
+      name: "MockLayerZeroEndpoint",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.MockLayerZeroEndpoint>;
     deployContract(
       name: "PlatformConfig",
       args: any[],
