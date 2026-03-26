@@ -108,7 +108,6 @@ export function CampaignDetail() {
     streamTotalAmount,
     streamWithdrawnAmount,
     streamRatePerSecond,
-    streamClaimable,
     refundEnabled,
     finalized,
     creator,

@@ -7,7 +7,8 @@ import app from "../src/app.js";
 
 const validWallet = "0x1234567890123456789012345678901234567890";
 const otherWallet = "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd";
-const validTxHash = "0x" + "u".repeat(64);
+// Use a valid unique hex tx hash to avoid chain_id+tx_hash conflicts across runs.
+const validTxHash = "0x" + Date.now().toString(16).padStart(64, "0");
 
 function futureDeadline() {
   const d = new Date();
