@@ -1,0 +1,11 @@
+# Set Railway "Root Directory" to decentrafi/backend (or this folder if the repo is backend-only).
+# Add Postgres + Redis plugins, then wire variables per .env.example.
+
+[build]
+builder = "RAILPACK"
+buildCommand = "npm run build"
+
+[deploy]
+startCommand = "npm start"
+healthcheckPath = "/health"
+healthcheckTimeout = 120

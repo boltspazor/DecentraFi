@@ -5,9 +5,32 @@ type AnyRedisClient = ReturnType<typeof createClient>;
 let client: AnyRedisClient | null = null;
 let connecting: Promise<AnyRedisClient | null> | null = null;
 
+/**
+ * Railway: reference Redis service URL (e.g. ${{ Redis.REDIS_URL }}) or discrete REDISHOST / REDISPORT / REDISPASSWORD.
+ */
 function getRedisUrl(): string | null {
-  const url = process.env.REDIS_URL?.trim();
-  return url ? url : null;
+  const direct =
+    process.env.REDIS_URL?.trim() ||
+    process.env.REDIS_PRIVATE_URL?.trim();
+  if (direct) return direct;
+
+  const host = process.env.REDISHOST?.trim();
+  if (!host) return null;
+
+  const port = process.env.REDISPORT?.trim() || "6379";
+  const password = process.env.REDISPASSWORD?.trim();
+  const user = process.env.REDISUSER?.trim();
+
+  if (password) {
+    if (user && user !== "default") {
+      return `redis://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}:${port}`;
+    }
+    return `redis://:${encodeURIComponent(password)}@${host}:${port}`;
+  }
+  if (user && user !== "default") {
+    return `redis://${encodeURIComponent(user)}@${host}:${port}`;
+  }
+  return `redis://${host}:${port}`;
 }
 
 export async function getRedis(): Promise<AnyRedisClient | null> {

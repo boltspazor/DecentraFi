@@ -2,9 +2,19 @@ import pg from "pg";
 
 const { Pool } = pg;
 
-const connectionString =
-  process.env.DATABASE_URL ||
-  "postgresql://localhost:5432/decentrafi";
+/**
+ * Railway: reference Postgres variables from the database service (e.g. ${{ Postgres.DATABASE_URL }}).
+ * Newer Railway Postgres: DATABASE_URL is typically the private URL; DATABASE_PUBLIC_URL is public.
+ */
+function getDatabaseUrl(): string {
+  const url =
+    process.env.DATABASE_URL?.trim() ||
+    process.env.DATABASE_PRIVATE_URL?.trim() ||
+    process.env.DATABASE_PUBLIC_URL?.trim();
+  return url || "postgresql://postgres:postgres@localhost:5432/decentrafi";
+}
+
+const connectionString = getDatabaseUrl();
 
 const max = (() => {
   const raw = process.env.DATABASE_MAX_CONNECTIONS;
@@ -13,9 +23,23 @@ const max = (() => {
   return Number.isNaN(n) ? undefined : Math.max(1, Math.min(n, 20));
 })();
 
-export const pool = new Pool(
-  max !== undefined ? { connectionString, max } : { connectionString }
-);
+const isLocalDb =
+  /localhost|127\.0\.0\.1/.test(connectionString) ||
+  connectionString.startsWith("postgresql://postgres:postgres@localhost");
+
+const useSsl =
+  !isLocalDb &&
+  (process.env.DATABASE_SSL === "true" ||
+    process.env.PGSSLMODE === "require" ||
+    /\?.*sslmode=require|&sslmode=require/.test(connectionString));
+
+const poolOptions: pg.PoolConfig = {
+  connectionString,
+  ...(useSsl ? { ssl: { rejectUnauthorized: false } } : {}),
+  ...(max !== undefined ? { max } : {}),
+};
+
+export const pool = new Pool(poolOptions);
 
 export async function connectDb(): Promise<void> {
   const client = await pool.connect();
