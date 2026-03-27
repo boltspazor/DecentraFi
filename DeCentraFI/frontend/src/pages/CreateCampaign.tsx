@@ -1,14 +1,14 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAccount, useSwitchChain } from "wagmi";
-import { sepolia } from "wagmi/chains";
 import { CampaignForm, CampaignFormData } from "../components/CampaignForm";
 import { useCampaignFactory } from "../services/blockchain";
 import * as api from "../services/api";
 import { getTransactionErrorMessage } from "../utils/errorMessages";
 import { recordWalletTransaction } from "../services/walletTransactions";
+import { getBlockExplorerTxUrl } from "../utils/blockExplorer";
 
-const SEPOLIA_ETHERSCAN = "https://sepolia.etherscan.io/tx/";
+const configuredChainId = Number(import.meta.env.VITE_CHAIN_ID ?? "") || 11155111;
 
 export function CreateCampaign() {
   const navigate = useNavigate();
@@ -47,8 +47,8 @@ export function CreateCampaign() {
       setSubmitError("Connect your wallet first");
       return;
     }
-    if (chainId !== undefined && chainId !== sepolia.id) {
-      setSubmitError("Switch to Sepolia network first");
+    if (chainId !== undefined && chainId !== configuredChainId) {
+      setSubmitError("Switch to the configured network first");
       return;
     }
     const goalWei = BigInt(data.goalWei);
@@ -118,7 +118,7 @@ export function CreateCampaign() {
       });
   }, [isTxSuccess, txHash, address, getCampaignAddressFromReceipt, navigate]);
 
-  const isWrongNetwork = isConnected && chainId !== undefined && chainId !== sepolia.id;
+  const isWrongNetwork = isConnected && chainId !== undefined && chainId !== configuredChainId;
   const isSubmitting = isTxPending;
   const canSubmit = isConnected && !isWrongNetwork && !isSubmitting;
 
@@ -131,12 +131,12 @@ export function CreateCampaign() {
           <p className="font-medium">Campaign created successfully</p>
           <p className="text-sm mt-1">Redirecting to home…</p>
           <a
-            href={`${SEPOLIA_ETHERSCAN}${successTxHash}`}
+            href={getBlockExplorerTxUrl(configuredChainId, successTxHash)}
             target="_blank"
             rel="noopener noreferrer"
             className="text-sm mt-2 inline-block text-green-700 underline"
           >
-            View transaction on Etherscan
+            View transaction on block explorer
           </a>
         </div>
       )}
@@ -150,14 +150,14 @@ export function CreateCampaign() {
       {isWrongNetwork && switchChain && (
         <div className="mb-4 p-3 rounded bg-amber-50 text-amber-800 border border-amber-200">
           <p className="font-medium">Wrong network</p>
-          <p className="text-sm mt-1">Please switch to Sepolia testnet to create a campaign.</p>
+          <p className="text-sm mt-1">Please switch to the configured network to create a campaign.</p>
           <button
             type="button"
             disabled={isSwitchPending}
-            onClick={() => switchChain({ chainId: sepolia.id })}
+            onClick={() => switchChain({ chainId: configuredChainId })}
             className="mt-2 px-4 py-2 bg-amber-600 text-white rounded hover:bg-amber-700 disabled:opacity-50"
           >
-            {isSwitchPending ? "Switching…" : "Switch to Sepolia"}
+            {isSwitchPending ? "Switching…" : "Switch network"}
           </button>
         </div>
       )}
@@ -184,7 +184,7 @@ export function CreateCampaign() {
 
       {canSubmit && (
         <p className="mt-4 text-sm text-gray-500">
-          You will be asked to confirm the transaction in your wallet. Ensure you are on Sepolia.
+          You will be asked to confirm the transaction in your wallet. Ensure you are on the configured network.
         </p>
       )}
     </div>

@@ -5,15 +5,16 @@ import {
   useWriteContract,
   useWaitForTransactionReceipt,
 } from "wagmi";
-import { sepolia } from "wagmi/chains";
 import { decodeEventLog } from "viem";
 import { campaignFactoryAbi } from "../abis/campaignFactory";
 
 const factoryAddress = (import.meta.env.VITE_CAMPAIGN_FACTORY_ADDRESS || "") as `0x${string}`;
+const configuredChainId = Number(import.meta.env.VITE_CHAIN_ID ?? "") || 11155111;
+const confirmations = Number(import.meta.env.VITE_TX_CONFIRMATIONS ?? "") || 1;
 
 export function useCampaignFactory() {
-  const publicClient = usePublicClient({ chainId: sepolia.id });
-  const { data: walletClient } = useWalletClient({ chainId: sepolia.id });
+  const publicClient = usePublicClient({ chainId: configuredChainId });
+  const { data: walletClient } = useWalletClient({ chainId: configuredChainId });
   const {
     writeContract,
     data: hash,
@@ -22,7 +23,11 @@ export function useCampaignFactory() {
     reset,
   } = useWriteContract();
 
-  const { isLoading: isConfirming, isSuccess, data: receipt } = useWaitForTransactionReceipt({ hash });
+  const { isLoading: isConfirming, isSuccess, data: receipt } = useWaitForTransactionReceipt({
+    hash,
+    chainId: configuredChainId,
+    confirmations,
+  });
 
   const contract =
     publicClient && factoryAddress && factoryAddress !== "0x"
@@ -42,7 +47,7 @@ export function useCampaignFactory() {
       abi: campaignFactoryAbi,
       functionName: "createCampaign",
       args: [goalWei, deadlineUnix],
-      chainId: sepolia.id,
+      chainId: configuredChainId,
     });
   }
 
@@ -69,7 +74,7 @@ export function useCampaignFactory() {
     contract,
     createCampaign,
     hash,
-    chainId: sepolia.id,
+    chainId: configuredChainId,
     isPending: isPending || isConfirming,
     isSuccess,
     error,

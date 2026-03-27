@@ -11,6 +11,7 @@ import { sepolia } from "wagmi/chains";
 import { campaignAbi } from "../abis/campaign";
 
 const DEFAULT_CHAIN_ID = sepolia.id;
+const confirmations = Number(import.meta.env.VITE_TX_CONFIRMATIONS ?? "") || 1;
 
 function useCampaignContract(campaignAddress: `0x${string}` | null, chainId: number = DEFAULT_CHAIN_ID) {
   const publicClient = usePublicClient({ chainId });
@@ -188,7 +189,11 @@ export function useContribute(campaignAddress: `0x${string}` | null, chainId: nu
     error,
     reset,
   } = useWriteContract();
-  const { isLoading: isConfirming, isSuccess, data: receipt } = useWaitForTransactionReceipt({ hash, chainId });
+  const { isLoading: isConfirming, isSuccess, data: receipt } = useWaitForTransactionReceipt({
+    hash,
+    chainId,
+    confirmations,
+  });
 
   function contribute(valueWei: bigint) {
     if (!campaignAddress) throw new Error("Campaign address required");
@@ -223,7 +228,7 @@ export function useWithdraw(campaignAddress: `0x${string}` | null, chainId: numb
     error,
     reset,
   } = useWriteContract();
-  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash, chainId });
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash, chainId, confirmations });
 
   function releaseFunds() {
     if (!campaignAddress) throw new Error("Campaign address required");
@@ -254,7 +259,7 @@ export function useStreamWithdraw(campaignAddress: `0x${string}` | null, chainId
     error,
     reset,
   } = useWriteContract();
-  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash, chainId });
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash, chainId, confirmations });
 
   function withdrawFromStream() {
     if (!campaignAddress) throw new Error("Campaign address required");
@@ -278,7 +283,7 @@ export function useStreamWithdraw(campaignAddress: `0x${string}` | null, chainId
 
 export function useFinalize(campaignAddress: `0x${string}` | null, chainId: number = DEFAULT_CHAIN_ID) {
   const { writeContract, data: hash, isPending, error, reset } = useWriteContract();
-  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash, chainId });
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash, chainId, confirmations });
 
   function finalizeAfterDeadline() {
     if (!campaignAddress) throw new Error("Campaign address required");
@@ -302,7 +307,7 @@ export function useFinalize(campaignAddress: `0x${string}` | null, chainId: numb
 
 export function useRefund(campaignAddress: `0x${string}` | null, chainId: number = DEFAULT_CHAIN_ID) {
   const { writeContract, data: hash, isPending, error, reset } = useWriteContract();
-  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash, chainId });
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash, chainId, confirmations });
 
   function claimRefund() {
     if (!campaignAddress) throw new Error("Campaign address required");
@@ -326,7 +331,7 @@ export function useRefund(campaignAddress: `0x${string}` | null, chainId: number
 
 export function useVoteProposal(campaignAddress: `0x${string}` | null, chainId: number = DEFAULT_CHAIN_ID) {
   const { writeContract, data: hash, isPending, error, reset } = useWriteContract();
-  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash, chainId });
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash, chainId, confirmations });
 
   function voteProposal(proposalId: bigint) {
     if (!campaignAddress) throw new Error("Campaign address required");

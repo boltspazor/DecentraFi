@@ -5,8 +5,11 @@ import { WagmiProvider } from 'wagmi'
 import { config } from './config/wagmiConfig'
 import App from './App'
 import './index.css'
+import { assertNetworkSafety } from "./utils/networkSafety";
 
 const queryClient = new QueryClient()
+
+assertNetworkSafety();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
