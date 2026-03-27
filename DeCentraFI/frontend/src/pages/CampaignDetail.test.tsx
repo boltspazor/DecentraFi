@@ -23,7 +23,7 @@ const mockCampaignMeta = {
 const mockContributions: { id: number; campaignId: number; contributorAddress: string; amountWei: string; txHash: string; createdAt: string }[] = [];
 
 vi.mock("../config/wagmiConfig", () => ({
-  SUPPORTED_CHAIN_IDS: [1, 137, 42161, 11155111],
+  SUPPORTED_CHAIN_IDS: [1, 11155111],
 }));
 
 vi.mock("../services/api", () => ({
@@ -650,7 +650,7 @@ describe("CampaignDetail", () => {
         ...mockCampaignMeta,
         addressesByChain: [
           { chainId: 1, campaignAddress: "0xaaa" },
-          { chainId: 137, campaignAddress: "0xbbb" },
+          { chainId: 11155111, campaignAddress: "0xbbb" },
         ],
       } as never);
       renderCampaignDetail();
@@ -659,7 +659,7 @@ describe("CampaignDetail", () => {
       });
       expect(screen.getByText(/Switch to a network where this campaign accepts contributions/i)).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /Ethereum/i })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /Polygon/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Sepolia/i })).toBeInTheDocument();
     });
 
     it("postContribution is called with chainId when contribution tx succeeds", async () => {

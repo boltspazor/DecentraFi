@@ -32,8 +32,6 @@ import { recordWalletTransaction } from "../services/walletTransactions";
 function getChainName(chainId: number): string {
   switch (chainId) {
     case 1: return "Ethereum";
-    case 137: return "Polygon";
-    case 42161: return "Arbitrum";
     case 11155111: return "Sepolia";
     default: return `Chain ${chainId}`;
   }

@@ -1,5 +1,6 @@
 import { getContract } from "viem";
 import {
+  useChainId,
   usePublicClient,
   useWalletClient,
   useWriteContract,
@@ -8,13 +9,22 @@ import {
 import { decodeEventLog } from "viem";
 import { campaignFactoryAbi } from "../abis/campaignFactory";
 
-const factoryAddress = (import.meta.env.VITE_CAMPAIGN_FACTORY_ADDRESS || "") as `0x${string}`;
-const configuredChainId = Number(import.meta.env.VITE_CHAIN_ID ?? "") || 11155111;
+const sepoliaFactoryAddress = (import.meta.env.VITE_CAMPAIGN_FACTORY_ADDRESS_SEPOLIA || "") as `0x${string}`;
+const mainnetFactoryAddress = (import.meta.env.VITE_CAMPAIGN_FACTORY_ADDRESS_MAINNET || "") as `0x${string}`;
+const allowMainnet = String(import.meta.env.VITE_ALLOW_MAINNET ?? "false").toLowerCase() === "true";
 const confirmations = Number(import.meta.env.VITE_TX_CONFIRMATIONS ?? "") || 1;
 
+function getFactoryAddress(chainId: number): `0x${string}` {
+  if (chainId === 11155111) return sepoliaFactoryAddress;
+  if (chainId === 1 && allowMainnet) return mainnetFactoryAddress;
+  return "0x" as `0x${string}`;
+}
+
 export function useCampaignFactory() {
-  const publicClient = usePublicClient({ chainId: configuredChainId });
-  const { data: walletClient } = useWalletClient({ chainId: configuredChainId });
+  const chainId = useChainId();
+  const factoryAddress = getFactoryAddress(chainId);
+  const publicClient = usePublicClient({ chainId });
+  const { data: walletClient } = useWalletClient({ chainId });
   const {
     writeContract,
     data: hash,
@@ -25,7 +35,7 @@ export function useCampaignFactory() {
 
   const { isLoading: isConfirming, isSuccess, data: receipt } = useWaitForTransactionReceipt({
     hash,
-    chainId: configuredChainId,
+    chainId,
     confirmations,
   });
 
@@ -40,14 +50,14 @@ export function useCampaignFactory() {
 
   function createCampaign(goalWei: bigint, deadlineUnix: bigint) {
     if (!factoryAddress || factoryAddress === "0x") {
-      throw new Error("VITE_CAMPAIGN_FACTORY_ADDRESS is not set");
+      throw new Error("Campaign factory address is not set for this network");
     }
     writeContract({
       address: factoryAddress,
       abi: campaignFactoryAbi,
       functionName: "createCampaign",
       args: [goalWei, deadlineUnix],
-      chainId: configuredChainId,
+      chainId,
     });
   }
 
@@ -74,7 +84,7 @@ export function useCampaignFactory() {
     contract,
     createCampaign,
     hash,
-    chainId: configuredChainId,
+    chainId,
     isPending: isPending || isConfirming,
     isSuccess,
     error,

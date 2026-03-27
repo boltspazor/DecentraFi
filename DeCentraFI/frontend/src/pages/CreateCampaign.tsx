@@ -8,7 +8,7 @@ import { getTransactionErrorMessage } from "../utils/errorMessages";
 import { recordWalletTransaction } from "../services/walletTransactions";
 import { getBlockExplorerTxUrl } from "../utils/blockExplorer";
 
-const configuredChainId = Number(import.meta.env.VITE_CHAIN_ID ?? "") || 11155111;
+const SUPPORTED_CHAIN_IDS = [1, 11155111] as const;
 
 export function CreateCampaign() {
   const navigate = useNavigate();
@@ -47,8 +47,8 @@ export function CreateCampaign() {
       setSubmitError("Connect your wallet first");
       return;
     }
-    if (chainId !== undefined && chainId !== configuredChainId) {
-      setSubmitError("Switch to the configured network first");
+    if (chainId !== undefined && !SUPPORTED_CHAIN_IDS.includes(chainId as (typeof SUPPORTED_CHAIN_IDS)[number])) {
+      setSubmitError("Switch to Sepolia or Ethereum mainnet first");
       return;
     }
     const goalWei = BigInt(data.goalWei);
@@ -118,7 +118,10 @@ export function CreateCampaign() {
       });
   }, [isTxSuccess, txHash, address, getCampaignAddressFromReceipt, navigate]);
 
-  const isWrongNetwork = isConnected && chainId !== undefined && chainId !== configuredChainId;
+  const isWrongNetwork =
+    isConnected &&
+    chainId !== undefined &&
+    !SUPPORTED_CHAIN_IDS.includes(chainId as (typeof SUPPORTED_CHAIN_IDS)[number]);
   const isSubmitting = isTxPending;
   const canSubmit = isConnected && !isWrongNetwork && !isSubmitting;
 
@@ -131,7 +134,7 @@ export function CreateCampaign() {
           <p className="font-medium">Campaign created successfully</p>
           <p className="text-sm mt-1">Redirecting to home…</p>
           <a
-            href={getBlockExplorerTxUrl(configuredChainId, successTxHash)}
+            href={getBlockExplorerTxUrl(txChainId ?? 11155111, successTxHash)}
             target="_blank"
             rel="noopener noreferrer"
             className="text-sm mt-2 inline-block text-green-700 underline"
@@ -150,14 +153,14 @@ export function CreateCampaign() {
       {isWrongNetwork && switchChain && (
         <div className="mb-4 p-3 rounded bg-amber-50 text-amber-800 border border-amber-200">
           <p className="font-medium">Wrong network</p>
-          <p className="text-sm mt-1">Please switch to the configured network to create a campaign.</p>
+          <p className="text-sm mt-1">Please switch to Sepolia or Ethereum mainnet to create a campaign.</p>
           <button
             type="button"
             disabled={isSwitchPending}
-            onClick={() => switchChain({ chainId: configuredChainId })}
+            onClick={() => switchChain({ chainId: 11155111 })}
             className="mt-2 px-4 py-2 bg-amber-600 text-white rounded hover:bg-amber-700 disabled:opacity-50"
           >
-            {isSwitchPending ? "Switching…" : "Switch network"}
+            {isSwitchPending ? "Switching…" : "Switch to Sepolia"}
           </button>
         </div>
       )}
@@ -184,7 +187,7 @@ export function CreateCampaign() {
 
       {canSubmit && (
         <p className="mt-4 text-sm text-gray-500">
-          You will be asked to confirm the transaction in your wallet. Ensure you are on the configured network.
+          You will be asked to confirm the transaction in MetaMask. Ensure you are on Sepolia (test) or Ethereum mainnet.
         </p>
       )}
     </div>
