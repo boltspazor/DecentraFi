@@ -1,0 +1,13 @@
+# Deploy this service with Railway "Root Directory" set to this folder (decentrafi/blockchain).
+# Variables: SEPOLIA_RPC_URL, PRIVATE_KEY (0x…), optional RAILWAY_RUN_DEPLOY + DEPLOY_NETWORK for pre-deploy.
+
+[build]
+builder = "RAILPACK"
+buildCommand = "npm run build"
+
+[deploy]
+startCommand = "npm start"
+healthcheckPath = "/health"
+healthcheckTimeout = 120
+# Uncomment to run contract deploy before each release (also set RAILWAY_RUN_DEPLOY=true in Railway):
+# preDeployCommand = ["npm run railway:predeploy"]
