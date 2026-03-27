@@ -29,6 +29,7 @@ import { getBlockExplorerTxUrl } from "../utils/blockExplorer";
 import { SUPPORTED_CHAIN_IDS } from "../config/wagmiConfig";
 import { recordWalletTransaction } from "../services/walletTransactions";
 import { PageShell } from "../components/PageShell";
+import { useTheme } from "../context/ThemeContext";
 
 function getChainName(chainId: number): string {
   switch (chainId) {
@@ -51,6 +52,11 @@ function formatCountdown(deadlineSeconds: number): string {
 }
 
 export function CampaignDetail() {
+  const { theme } = useTheme();
+  const chartGrid = theme === "dark" ? "#334155" : "#e5e7eb";
+  const chartLine = theme === "dark" ? "#818cf8" : "#4f46e5";
+  const chartBar = theme === "dark" ? "#34d399" : "#10b981";
+
   const { id } = useParams<{ id: string }>();
   const { address, isConnected, chainId } = useAccount();
   const { switchChain } = useSwitchChain();
@@ -440,11 +446,11 @@ export function CampaignDetail() {
   if (loadingMeta) {
     return (
       <PageShell maxWidth="medium">
-        <p className="text-slate-500">Loading campaign…</p>
+        <p className="text-slate-500 dark:text-slate-400">Loading campaign…</p>
         <div className="mt-4 animate-pulse space-y-4" aria-hidden>
-          <div className="h-8 max-w-md rounded-lg bg-slate-200" />
-          <div className="h-24 rounded-2xl bg-slate-100" />
-          <div className="h-40 rounded-2xl bg-slate-100" />
+          <div className="h-8 max-w-md rounded-lg bg-slate-200 dark:bg-slate-700" />
+          <div className="h-24 rounded-2xl bg-slate-100 dark:bg-slate-800/60" />
+          <div className="h-40 rounded-2xl bg-slate-100 dark:bg-slate-800/60" />
         </div>
       </PageShell>
     );
@@ -453,10 +459,10 @@ export function CampaignDetail() {
   if (errorMeta || !campaignMeta) {
     return (
       <PageShell maxWidth="medium">
-        <p className="text-red-600">{errorMeta ?? "Campaign not found"}</p>
+        <p className="text-red-600 dark:text-red-400">{errorMeta ?? "Campaign not found"}</p>
         <Link
           to="/"
-          className="mt-6 inline-flex font-medium text-indigo-600 hover:underline"
+          className="mt-6 inline-flex font-medium text-indigo-600 hover:underline dark:text-indigo-400"
         >
           ← Back to campaigns
         </Link>
@@ -481,115 +487,120 @@ export function CampaignDetail() {
     <PageShell maxWidth="medium">
       <Link
         to="/"
-        className="mb-6 inline-flex text-sm font-medium text-indigo-600 hover:underline"
+        className="mb-6 inline-flex text-sm font-medium text-indigo-600 hover:underline dark:text-indigo-400"
       >
         ← Back to campaigns
       </Link>
 
       <div className="flex flex-wrap items-center gap-2 mb-2">
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900">{campaignMeta.title}</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">{campaignMeta.title}</h1>
         {campaignMeta.isVerified && (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-sm font-medium bg-green-100 text-green-800">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-sm font-medium bg-green-100 text-green-800 dark:bg-emerald-950/60 dark:text-emerald-300">
             ✔ Verified Campaign
           </span>
         )}
         {(campaignMeta.reportCount ?? 0) > 0 && !campaignMeta.isVerified && (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-sm font-medium bg-amber-100 text-amber-800">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-sm font-medium bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-200">
             ⚠ Reported Campaign
           </span>
         )}
       </div>
-      <p className="text-slate-600 whitespace-pre-wrap mb-6 leading-relaxed">{campaignMeta.description}</p>
+      <p className="text-slate-600 whitespace-pre-wrap mb-6 leading-relaxed dark:text-slate-400">{campaignMeta.description}</p>
 
-      <div className="mb-6 rounded-2xl border border-slate-200/80 bg-gradient-to-br from-slate-50 to-white p-5 shadow-soft sm:p-6">
-        <div className="flex justify-between text-sm mb-2">
+      <div className="mb-6 rounded-2xl border border-slate-200/80 bg-gradient-to-br from-slate-50 to-white p-5 shadow-soft dark:border-slate-700/80 dark:from-slate-900/80 dark:to-slate-950/50 sm:p-6">
+        <div className="flex justify-between text-sm mb-2 dark:text-slate-300">
           <span>Goal: {goalEth} ETH</span>
           <span>Raised: {raisedEth} ETH (this chain)</span>
         </div>
         {totalRaisedAllChainsWei !== "0" && (
-          <p className="text-sm font-medium text-indigo-600 mb-1">
+          <p className="text-sm font-medium text-indigo-600 mb-1 dark:text-indigo-400">
             Total funds (all chains): {totalRaisedAllChainsEth} ETH
           </p>
         )}
-        <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+        <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden dark:bg-slate-800">
           <div
-            className="h-full bg-indigo-600 transition-all duration-300"
+            className="h-full bg-indigo-600 transition-all duration-300 dark:bg-indigo-500"
             style={{ width: `${Math.min(progressPercent, 100)}%` }}
           />
         </div>
-        <p className="text-xs text-gray-500 mt-1">{progressPercent}% funded</p>
-        <p className="text-sm text-gray-600 mt-2">
+        <p className="text-xs text-gray-500 mt-1 dark:text-slate-500">{progressPercent}% funded</p>
+        <p className="text-sm text-gray-600 mt-2 dark:text-slate-300">
           Deadline: {new Date(deadlineNum * 1000).toLocaleString()}
           {countdown && countdown !== "Ended" && (
-            <span className="ml-2 font-medium text-indigo-600">• {countdown}</span>
+            <span className="ml-2 font-medium text-indigo-600 dark:text-indigo-400">• {countdown}</span>
           )}
         </p>
-        <p className="text-sm text-gray-600">Contributors: {contributorCount}</p>
+        <p className="text-sm text-gray-600 dark:text-slate-400">Contributors: {contributorCount}</p>
         {campaignMeta.status && (
           <p className="text-sm font-medium mt-1">
-            Status: <span className="text-indigo-600">{campaignMeta.status}</span>
+            Status: <span className="text-indigo-600 dark:text-indigo-400">{campaignMeta.status}</span>
           </p>
         )}
         {typeof campaignMeta.creatorTrustScore === "number" && (
-          <p className="text-sm text-gray-700 mt-2">
+          <p className="text-sm text-gray-700 mt-2 dark:text-slate-300">
             <span className="text-amber-500">⭐</span> Trust Score:{" "}
             <span className="font-semibold">{campaignMeta.creatorTrustScore}/10</span>
           </p>
         )}
       </div>
 
-      <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
-        <h2 className="text-lg font-bold text-slate-900">Campaign analytics</h2>
-        {analyticsLoading && <p className="text-sm text-gray-500">Loading analytics…</p>}
+      <div className="mb-6 rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm backdrop-blur-sm dark:border-slate-700/80 dark:bg-slate-900/55 sm:p-6">
+        <h2 className="text-lg font-bold text-slate-900 dark:text-white">Campaign analytics</h2>
+        {analyticsLoading && <p className="text-sm text-gray-500 dark:text-slate-400">Loading analytics…</p>}
         {analyticsError && !analyticsLoading && (
-          <p className="text-sm text-red-600">Failed to load analytics.</p>
+          <p className="text-sm text-red-600 dark:text-red-400">Failed to load analytics.</p>
         )}
         {analytics && !analyticsLoading && !analyticsError && (
           <>
-            <div className="grid grid-cols-2 gap-3 text-sm mb-4">
+            <div className="grid grid-cols-2 gap-3 text-sm mb-4 dark:text-slate-200">
               <div>
-                <p className="text-gray-500">Total contributions</p>
+                <p className="text-gray-500 dark:text-slate-400">Total contributions</p>
                 <p className="font-semibold">
                   {(Number(analytics.totalContributionsWei) / 1e18).toFixed(4)} ETH
                 </p>
               </div>
               <div>
-                <p className="text-gray-500">Unique contributors</p>
+                <p className="text-gray-500 dark:text-slate-400">Unique contributors</p>
                 <p className="font-semibold">{analytics.uniqueContributors}</p>
               </div>
               <div>
-                <p className="text-gray-500">Average donation</p>
+                <p className="text-gray-500 dark:text-slate-400">Average donation</p>
                 <p className="font-semibold">
                   {(Number(analytics.averageContributionWei) / 1e18).toFixed(4)} ETH
                 </p>
               </div>
               <div>
-                <p className="text-gray-500">Goal completion</p>
+                <p className="text-gray-500 dark:text-slate-400">Goal completion</p>
                 <p className="font-semibold">{analytics.goalCompletionPercentage}%</p>
               </div>
             </div>
             {analyticsTimeseries.length > 0 && (
               <div className="space-y-4">
                 <div>
-                  <p className="text-sm font-medium text-gray-700 mb-1">
+                  <p className="text-sm font-medium text-gray-700 mb-1 dark:text-slate-300">
                     Funding progress over time
                   </p>
                   <div className="h-40">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={analyticsTimeseries}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                        <XAxis dataKey="time" tick={{ fontSize: 10 }} />
+                        <CartesianGrid strokeDasharray="3 3" stroke={chartGrid} />
+                        <XAxis dataKey="time" tick={{ fontSize: 10, fill: theme === "dark" ? "#94a3b8" : "#64748b" }} />
                         <YAxis
-                          tick={{ fontSize: 10 }}
+                          tick={{ fontSize: 10, fill: theme === "dark" ? "#94a3b8" : "#64748b" }}
                           tickFormatter={(v: number) => `${v.toFixed(2)}`}
                         />
                         <Tooltip
                           formatter={(value: number) => [`${value.toFixed(4)} ETH`, "Cumulative"]}
+                          contentStyle={
+                            theme === "dark"
+                              ? { background: "#0f172a", border: "1px solid #334155", borderRadius: "8px" }
+                              : undefined
+                          }
                         />
                         <Line
                           type="monotone"
                           dataKey="cumulativeEth"
-                          stroke="#4f46e5"
+                          stroke={chartLine}
                           strokeWidth={2}
                           dot={false}
                         />
@@ -598,17 +609,23 @@ export function CampaignDetail() {
                   </div>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-700 mb-1">
+                  <p className="text-sm font-medium text-gray-700 mb-1 dark:text-slate-300">
                     Contribution distribution
                   </p>
                   <div className="h-32">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={analyticsTimeseries}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                        <XAxis dataKey="time" tick={{ fontSize: 10 }} />
-                        <YAxis tick={{ fontSize: 10 }} />
-                        <Tooltip />
-                        <Bar dataKey="contributionCount" fill="#10b981" />
+                        <CartesianGrid strokeDasharray="3 3" stroke={chartGrid} />
+                        <XAxis dataKey="time" tick={{ fontSize: 10, fill: theme === "dark" ? "#94a3b8" : "#64748b" }} />
+                        <YAxis tick={{ fontSize: 10, fill: theme === "dark" ? "#94a3b8" : "#64748b" }} />
+                        <Tooltip
+                          contentStyle={
+                            theme === "dark"
+                              ? { background: "#0f172a", border: "1px solid #334155", borderRadius: "8px" }
+                              : undefined
+                          }
+                        />
+                        <Bar dataKey="contributionCount" fill={chartBar} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -619,23 +636,23 @@ export function CampaignDetail() {
         )}
       </div>
 
-      <div className="mb-6 p-4 bg-white rounded-lg border border-gray-200">
-        <h2 className="text-lg font-semibold mb-2">Governance</h2>
-        <p className="text-sm text-gray-600 mb-3">
+      <div className="mb-6 p-4 bg-white/90 rounded-lg border border-gray-200 backdrop-blur-sm dark:bg-slate-900/55 dark:border-slate-700">
+        <h2 className="text-lg font-semibold mb-2 dark:text-white">Governance</h2>
+        <p className="text-sm text-gray-600 mb-3 dark:text-slate-400">
           Contributors can vote on proposals about milestones, withdrawals, and campaign updates.
         </p>
         {proposals.length === 0 ? (
-          <p className="text-sm text-gray-500">No active proposals.</p>
+          <p className="text-sm text-gray-500 dark:text-slate-500">No active proposals.</p>
         ) : (
           <ul className="space-y-2">
             {proposals.map((p) => (
               <li
                 key={p.id}
-                className="flex items-center justify-between text-sm bg-gray-50 border border-gray-200 rounded px-3 py-2"
+                className="flex items-center justify-between text-sm bg-gray-50 border border-gray-200 rounded px-3 py-2 dark:bg-slate-800/50 dark:border-slate-600"
               >
                 <div className="mr-3">
-                  <p className="font-medium text-gray-900">{p.description}</p>
-                  <p className="text-xs text-gray-500">
+                  <p className="font-medium text-gray-900 dark:text-slate-100">{p.description}</p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">
                     Votes: {p.voteCount.toString()}{" "}
                     {p.executed && (
                       <span className="ml-1 inline-block px-1.5 py-0.5 rounded bg-green-100 text-green-700">
@@ -667,27 +684,27 @@ export function CampaignDetail() {
           </ul>
         )}
         {voteError && (
-          <p className="mt-2 text-xs text-red-600">
+          <p className="mt-2 text-xs text-red-600 dark:text-red-400">
             {voteError instanceof Error ? voteError.message : String(voteError)}
           </p>
         )}
       </div>
 
       {isConnected && address && !campaignMeta.isVerified && (
-        <div className="mb-6 p-4 border border-gray-200 rounded-lg">
-          <h2 className="text-lg font-semibold mb-2">Report Campaign</h2>
-          <p className="text-sm text-gray-600 mb-2">
+        <div className="mb-6 p-4 border border-gray-200 rounded-lg dark:border-slate-700 dark:bg-slate-900/40">
+          <h2 className="text-lg font-semibold mb-2 dark:text-white">Report Campaign</h2>
+          <p className="text-sm text-gray-600 mb-2 dark:text-slate-400">
             Seen something wrong? Submit a report for moderators to review.
           </p>
           {reportSuccess ? (
-            <p className="text-sm text-green-600">Report submitted. Thank you.</p>
+            <p className="text-sm text-green-600 dark:text-emerald-400">Report submitted. Thank you.</p>
           ) : (
             <>
               <textarea
                 placeholder="Reason (optional)"
                 value={reportReason}
                 onChange={(e) => setReportReason(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mb-2"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mb-2 dark:border-slate-600 dark:bg-slate-900/50 dark:text-slate-100"
                 rows={2}
               />
               <button
@@ -716,7 +733,7 @@ export function CampaignDetail() {
                 {reportSubmitting ? "Submitting…" : "Report Campaign"}
               </button>
               {reportError && (
-                <p className="mt-2 text-sm text-red-600">{reportError}</p>
+                <p className="mt-2 text-sm text-red-600 dark:text-red-400">{reportError}</p>
               )}
             </>
           )}
@@ -724,7 +741,7 @@ export function CampaignDetail() {
       )}
 
       {isWrongNetwork && switchChain && (
-        <div className="mb-4 p-3 rounded bg-amber-50 text-amber-800">
+        <div className="mb-4 p-3 rounded bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
           <p className="mb-2">
             {addressesByChain.length > 0
               ? "Switch to a network where this campaign accepts contributions:"
@@ -748,7 +765,7 @@ export function CampaignDetail() {
       )}
 
       {isExpired && (
-        <div className="mb-4 p-3 rounded bg-gray-100 text-gray-800">
+        <div className="mb-4 p-3 rounded bg-gray-100 text-gray-800 dark:bg-slate-800/80 dark:text-slate-200">
           {goalReached ? (
             <p className="font-medium">Goal Reached – Creator Can Withdraw</p>
           ) : (
@@ -785,7 +802,7 @@ export function CampaignDetail() {
           >
             {isStreamWithdrawPending ? "Withdrawing…" : "Withdraw streamed funds"}
           </button>
-          <p className="text-xs text-gray-600 mt-2">
+          <p className="text-xs text-gray-600 mt-2 dark:text-slate-400">
             Claimable: {(Number(streamClaimableEstimated) / 1e18).toFixed(6)} ETH • Rate:{" "}
             {(Number(streamRatePerSecond) / 1e18).toFixed(8)} ETH/s
           </p>
@@ -820,7 +837,7 @@ export function CampaignDetail() {
           >
             {isRefundPending ? "Claiming…" : "Claim refund"}
           </button>
-          <p className="text-xs text-gray-600 mt-1">
+          <p className="text-xs text-gray-600 mt-1 dark:text-slate-400">
             Your contribution: {(Number(myContribution) / 1e18).toFixed(4)} ETH
           </p>
           {refundError && (
@@ -830,10 +847,10 @@ export function CampaignDetail() {
       )}
 
       {!closed && !isExpired && (
-        <div className="mb-8 p-4 border border-gray-200 rounded-lg">
-          <h2 className="text-lg font-semibold mb-3">Contribute</h2>
+        <div className="mb-8 p-4 border border-gray-200 rounded-lg dark:border-slate-700 dark:bg-slate-900/40">
+          <h2 className="text-lg font-semibold mb-3 dark:text-white">Contribute</h2>
           {!isConnected && (
-            <p className="text-amber-700 mb-3">Connect your wallet to contribute.</p>
+            <p className="text-amber-700 mb-3 dark:text-amber-300">Connect your wallet to contribute.</p>
           )}
           {(contributeTxError || contributeError) && (
             <p className="mb-3 text-sm text-red-600">
@@ -841,7 +858,7 @@ export function CampaignDetail() {
             </p>
           )}
           {contributeSuccessTx && currentChainId != null && (
-            <p className="mb-3 text-sm text-green-600">
+            <p className="mb-3 text-sm text-green-600 dark:text-emerald-400">
               Contribution confirmed!{" "}
               <a
                 href={getBlockExplorerTxUrl(currentChainId, contributeSuccessTx)}
@@ -855,7 +872,7 @@ export function CampaignDetail() {
           )}
           <form onSubmit={handleContribute} className="flex flex-wrap items-end gap-3">
             <div>
-              <label htmlFor="amount" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="amount" className="block text-sm font-medium text-gray-700 mb-1 dark:text-slate-300">
                 Amount (ETH)
               </label>
               <input
@@ -865,7 +882,7 @@ export function CampaignDetail() {
                 value={contributeAmountEth}
                 onChange={(e) => setContributeAmountEth(e.target.value)}
                 placeholder="0.1"
-                className="w-32 px-3 py-2 border border-gray-300 rounded-md"
+                className="w-32 px-3 py-2 border border-gray-300 rounded-md dark:border-slate-600 dark:bg-slate-900/50 dark:text-slate-100"
               />
             </div>
             <button
@@ -880,7 +897,7 @@ export function CampaignDetail() {
       )}
 
       {(closed || isExpired) && !canStartStreaming && !canWithdrawStream && !canClaimRefund && (
-        <p className="text-gray-500 mb-6">
+        <p className="text-gray-500 mb-6 dark:text-slate-400">
           {goalReached
             ? "This campaign has reached its goal."
             : "This campaign has ended."}
@@ -888,9 +905,9 @@ export function CampaignDetail() {
       )}
 
       <section>
-        <h2 className="text-lg font-semibold mb-3">Contributions ({contributions.length})</h2>
+        <h2 className="text-lg font-semibold mb-3 dark:text-white">Contributions ({contributions.length})</h2>
         {contributions.length === 0 ? (
-          <p className="text-gray-500">No contributions yet.</p>
+          <p className="text-gray-500 dark:text-slate-400">No contributions yet.</p>
         ) : (
           <ul className="space-y-2">
             {contributions.map((c) => (

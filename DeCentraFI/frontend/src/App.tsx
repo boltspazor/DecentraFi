@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { AppBackground } from './components/AppBackground'
 import { Navbar } from './components/Navbar'
 import { Home } from './pages/Home'
 import { CreateCampaign } from './pages/CreateCampaign'
@@ -11,8 +12,9 @@ import { CreatorProfile } from './pages/CreatorProfile'
 function App() {
   return (
     <BrowserRouter>
+      <AppBackground />
       <Navbar />
-      <main className="min-h-[calc(100vh-4rem)] pb-12 sm:pb-16">
+      <main className="relative z-10 min-h-[calc(100vh-4rem)] pb-12 sm:pb-16">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/create" element={<CreateCampaign />} />

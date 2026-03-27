@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ThemeProvider } from "../context/ThemeContext";
 import { CampaignDetail } from "../pages/CampaignDetail";
 
 const mockCampaignMeta = {
@@ -120,13 +121,15 @@ function renderCampaignDetail(id = "1") {
     defaultOptions: { queries: { retry: false } },
   });
   return render(
-    <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={[`/campaigns/${id}`]}>
-        <Routes>
-          <Route path="/campaigns/:id" element={<CampaignDetail />} />
-        </Routes>
-      </MemoryRouter>
-    </QueryClientProvider>
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={[`/campaigns/${id}`]}>
+          <Routes>
+            <Route path="/campaigns/:id" element={<CampaignDetail />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }
 

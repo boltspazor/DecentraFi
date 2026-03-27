@@ -9,6 +9,19 @@
   color-scheme: light;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  --app-bg: #f8fafc;
+  --app-grid-line: rgb(148 163 184 / 0.22);
+  --app-fg: #0f172a;
+  --app-muted: #475569;
+}
+
+.dark {
+  color-scheme: dark;
+  --app-bg: #020617;
+  --app-grid-line: rgb(148 163 184 / 0.09);
+  --app-fg: #f1f5f9;
+  --app-muted: #94a3b8;
 }
 
 * {
@@ -19,16 +32,22 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  color: #0f172a;
-  background-color: #f8fafc;
-  background-image:
-    radial-gradient(ellipse 120% 80% at 50% -20%, rgb(199 210 254 / 35%), transparent),
-    radial-gradient(ellipse 80% 50% at 100% 0%, rgb(196 181 253 / 20%), transparent);
-  background-attachment: fixed;
+  color: var(--app-fg);
+  background-color: var(--app-bg);
+  transition: background-color 0.3s ease, color 0.2s ease;
 }
 
 #root {
   min-height: 100vh;
+}
+
+/* Aceternity-style grid: fades toward edges (spotlight mask) */
+.app-grid-mask {
+  background-image:
+    linear-gradient(to right, var(--app-grid-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--app-grid-line) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 85% 65% at 50% -5%, black 15%, transparent 65%);
 }
 
 @layer utilities {

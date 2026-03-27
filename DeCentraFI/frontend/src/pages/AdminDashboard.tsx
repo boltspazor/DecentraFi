@@ -53,8 +53,8 @@ export function AdminDashboard() {
   if (!isConnected || !address) {
     return (
       <PageShell maxWidth="narrow">
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Admin</h1>
-        <p className="mt-3 text-slate-600">Connect your wallet to access the admin dashboard.</p>
+        <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Admin</h1>
+        <p className="mt-3 text-slate-600 dark:text-slate-400">Connect your wallet to access the admin dashboard.</p>
       </PageShell>
     );
   }
@@ -62,29 +62,29 @@ export function AdminDashboard() {
   if (!ADMIN_WALLET || !isAdmin) {
     return (
       <PageShell maxWidth="narrow">
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Admin</h1>
-        <p className="mt-3 text-slate-600">You do not have permission to view this page.</p>
+        <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Admin</h1>
+        <p className="mt-3 text-slate-600 dark:text-slate-400">You do not have permission to view this page.</p>
       </PageShell>
     );
   }
 
   return (
     <PageShell maxWidth="narrow">
-      <h1 className="text-3xl font-bold tracking-tight text-slate-900">Admin</h1>
-      <p className="mt-2 text-slate-600">
+      <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Admin</h1>
+      <p className="mt-2 text-slate-600 dark:text-slate-400">
         Review reported campaigns and verify them. Only the configured admin wallet can verify.
       </p>
 
       {error && (
-        <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+        <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-200">
           {error}
         </div>
       )}
 
       {loading ? (
-        <p className="mt-8 text-slate-500">Loading reported campaigns…</p>
+        <p className="mt-8 text-slate-500 dark:text-slate-400">Loading reported campaigns…</p>
       ) : reported.length === 0 ? (
-        <p className="mt-8 rounded-2xl border border-dashed border-slate-200 bg-white/60 px-4 py-10 text-center text-slate-600">
+        <p className="mt-8 rounded-2xl border border-dashed border-slate-200 bg-white/60 px-4 py-10 text-center text-slate-600 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-400">
           No reported campaigns.
         </p>
       ) : (
@@ -97,13 +97,13 @@ export function AdminDashboard() {
               <div className="min-w-0">
                 <Link
                   to={`/campaigns/${c.id}`}
-                  className="font-semibold text-indigo-600 hover:underline"
+                  className="font-semibold text-indigo-600 hover:underline dark:text-indigo-400"
                 >
                   {c.title}
                 </Link>
-                <p className="mt-1 break-all font-mono text-xs text-slate-500">{c.campaignAddress}</p>
+                <p className="mt-1 break-all font-mono text-xs text-slate-500 dark:text-slate-400">{c.campaignAddress}</p>
                 {c.isVerified && (
-                  <span className="mt-2 inline-block rounded-md bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
+                  <span className="mt-2 inline-block rounded-md bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
                     ✔ Verified
                   </span>
                 )}

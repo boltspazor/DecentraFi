@@ -128,21 +128,21 @@ export function CreateCampaign() {
 
   return (
     <PageShell maxWidth="narrow">
-      <h1 className="text-3xl font-bold tracking-tight text-slate-900">Create campaign</h1>
-      <p className="mt-2 text-slate-600">
+      <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Create campaign</h1>
+      <p className="mt-2 text-slate-600 dark:text-slate-400">
         Deploy a new campaign contract and list it in the app.
       </p>
       <div className="mt-8">
 
       {successTxHash && (
-        <div className="mb-4 p-4 rounded bg-green-50 text-green-800 border border-green-200" role="alert">
+        <div className="mb-4 p-4 rounded bg-green-50 text-green-800 border border-green-200 dark:bg-emerald-950/40 dark:text-emerald-200 dark:border-emerald-900/50" role="alert">
           <p className="font-medium">Campaign created successfully</p>
           <p className="text-sm mt-1">Redirecting to home…</p>
           <a
             href={getBlockExplorerTxUrl(txChainId ?? 11155111, successTxHash)}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-sm mt-2 inline-block text-green-700 underline"
+            className="text-sm mt-2 inline-block text-green-700 underline dark:text-emerald-300"
           >
             View transaction on block explorer
           </a>
@@ -150,13 +150,13 @@ export function CreateCampaign() {
       )}
 
       {!isConnected && (
-        <p className="mb-4 text-amber-700 bg-amber-50 p-3 rounded" role="status">
+        <p className="mb-4 text-amber-800 bg-amber-50 p-3 rounded dark:bg-amber-950/40 dark:text-amber-200 dark:ring-1 dark:ring-amber-900/40" role="status">
           Connect your wallet to create a campaign.
         </p>
       )}
 
       {isWrongNetwork && switchChain && (
-        <div className="mb-4 p-3 rounded bg-amber-50 text-amber-800 border border-amber-200">
+        <div className="mb-4 p-3 rounded bg-amber-50 text-amber-800 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-200 dark:border-amber-900/50">
           <p className="font-medium">Wrong network</p>
           <p className="text-sm mt-1">Please switch to Sepolia or Ethereum mainnet to create a campaign.</p>
           <button
@@ -171,13 +171,13 @@ export function CreateCampaign() {
       )}
 
       {txError && (
-        <div className="mb-4 p-3 rounded bg-red-50 text-red-700 border border-red-200" role="alert">
+        <div className="mb-4 p-3 rounded bg-red-50 text-red-700 border border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-900/50" role="alert">
           {getTransactionErrorMessage(txError)}
         </div>
       )}
 
       {submitError && (
-        <div className="mb-4 p-3 rounded bg-red-50 text-red-700 border border-red-200" role="alert">
+        <div className="mb-4 p-3 rounded bg-red-50 text-red-700 border border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-900/50" role="alert">
           {submitError}
         </div>
       )}
@@ -191,7 +191,7 @@ export function CreateCampaign() {
       />
 
       {canSubmit && (
-        <p className="mt-4 text-sm text-slate-500">
+        <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
           You will be asked to confirm the transaction in MetaMask. Ensure you are on Sepolia (test) or Ethereum mainnet.
         </p>
       )}

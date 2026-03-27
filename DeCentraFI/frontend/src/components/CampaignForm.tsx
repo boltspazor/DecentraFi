@@ -45,7 +45,7 @@ export function CampaignForm({ onSubmit, isSubmitting = false }: CampaignFormPro
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4 max-w-md">
       <div>
-        <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1 dark:text-slate-300">
           Title
         </label>
         <input
@@ -59,7 +59,7 @@ export function CampaignForm({ onSubmit, isSubmitting = false }: CampaignFormPro
           placeholder="Campaign title"
           aria-invalid={!!errors.title}
           aria-describedby={errors.title ? "title-error" : undefined}
-          className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${errors.title ? "border-red-500" : "border-gray-300"}`}
+          className={`w-full px-3 py-2 border rounded-md bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-slate-900/50 dark:text-slate-100 dark:focus:ring-indigo-400 ${errors.title ? "border-red-500" : "border-gray-300 dark:border-slate-600"}`}
         />
         {errors.title && (
           <p id="title-error" className="mt-1 text-sm text-red-600" role="alert">
@@ -68,7 +68,7 @@ export function CampaignForm({ onSubmit, isSubmitting = false }: CampaignFormPro
         )}
       </div>
       <div>
-        <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1 dark:text-slate-300">
           Description
         </label>
         <textarea
@@ -83,7 +83,7 @@ export function CampaignForm({ onSubmit, isSubmitting = false }: CampaignFormPro
           rows={4}
           aria-invalid={!!errors.description}
           aria-describedby={errors.description ? "description-error" : undefined}
-          className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${errors.description ? "border-red-500" : "border-gray-300"}`}
+          className={`w-full px-3 py-2 border rounded-md bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-slate-900/50 dark:text-slate-100 dark:focus:ring-indigo-400 ${errors.description ? "border-red-500" : "border-gray-300 dark:border-slate-600"}`}
         />
         {errors.description && (
           <p id="description-error" className="mt-1 text-sm text-red-600" role="alert">
@@ -92,7 +92,7 @@ export function CampaignForm({ onSubmit, isSubmitting = false }: CampaignFormPro
         )}
       </div>
       <div>
-        <label htmlFor="goal" className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="goal" className="block text-sm font-medium text-gray-700 mb-1 dark:text-slate-300">
           Goal (ETH)
         </label>
         <input
@@ -108,7 +108,7 @@ export function CampaignForm({ onSubmit, isSubmitting = false }: CampaignFormPro
           placeholder="e.g. 1.5"
           aria-invalid={!!errors.goalEth}
           aria-describedby={errors.goalEth ? "goal-error" : undefined}
-          className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${errors.goalEth ? "border-red-500" : "border-gray-300"}`}
+          className={`w-full px-3 py-2 border rounded-md bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-slate-900/50 dark:text-slate-100 dark:focus:ring-indigo-400 ${errors.goalEth ? "border-red-500" : "border-gray-300 dark:border-slate-600"}`}
         />
         {errors.goalEth && (
           <p id="goal-error" className="mt-1 text-sm text-red-600" role="alert">
@@ -117,7 +117,7 @@ export function CampaignForm({ onSubmit, isSubmitting = false }: CampaignFormPro
         )}
       </div>
       <div>
-        <label htmlFor="deadline" className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="deadline" className="block text-sm font-medium text-gray-700 mb-1 dark:text-slate-300">
           Deadline
         </label>
         <input
@@ -131,7 +131,7 @@ export function CampaignForm({ onSubmit, isSubmitting = false }: CampaignFormPro
           required
           aria-invalid={!!errors.deadline}
           aria-describedby={errors.deadline ? "deadline-error" : undefined}
-          className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${errors.deadline ? "border-red-500" : "border-gray-300"}`}
+          className={`w-full px-3 py-2 border rounded-md bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-slate-900/50 dark:text-slate-100 dark:focus:ring-indigo-400 ${errors.deadline ? "border-red-500" : "border-gray-300 dark:border-slate-600"}`}
         />
         {errors.deadline && (
           <p id="deadline-error" className="mt-1 text-sm text-red-600" role="alert">

@@ -15,7 +15,7 @@ type Props = {
 export function PageShell({ children, className = "", maxWidth = "wide" }: Props) {
   return (
     <div
-      className={`mx-auto w-full ${maxWidthClass[maxWidth]} px-4 sm:px-6 lg:px-8 py-8 sm:py-10 ${className}`}
+      className={`relative z-10 mx-auto w-full ${maxWidthClass[maxWidth]} px-4 sm:px-6 lg:px-8 py-8 sm:py-10 ${className}`}
     >
       {children}
     </div>

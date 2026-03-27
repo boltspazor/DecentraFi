@@ -6,6 +6,7 @@ import { config } from './config/wagmiConfig'
 import App from './App'
 import './index.css'
 import { assertNetworkSafety } from "./utils/networkSafety";
+import { ThemeProvider } from "./context/ThemeContext";
 
 const queryClient = new QueryClient()
 
@@ -13,10 +14,12 @@ assertNetworkSafety();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <WagmiProvider config={config}>
-      <QueryClientProvider client={queryClient}>
-        <App />
-      </QueryClientProvider>
-    </WagmiProvider>
+    <ThemeProvider>
+      <WagmiProvider config={config}>
+        <QueryClientProvider client={queryClient}>
+          <App />
+        </QueryClientProvider>
+      </WagmiProvider>
+    </ThemeProvider>
   </StrictMode>,
 )

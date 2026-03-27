@@ -32,8 +32,10 @@ export function WalletConnectButton() {
             type="button"
             onClick={() => setNetworkMenuOpen((o) => !o)}
             disabled={isSwitchPending}
-            className={`w-full px-3 py-2 text-sm sm:w-auto sm:py-1.5 rounded-lg border ${
-              isWrongNetwork ? "bg-amber-600 text-white border-amber-600 hover:bg-amber-700" : "border-slate-200 hover:bg-slate-50"
+            className={`w-full px-3 py-2 text-sm sm:w-auto sm:py-1.5 rounded-lg border transition ${
+              isWrongNetwork
+                ? "bg-amber-600 text-white border-amber-600 hover:bg-amber-700"
+                : "border-slate-200 hover:bg-slate-50 dark:border-slate-600 dark:hover:bg-slate-800/80 dark:text-slate-200"
             } disabled:opacity-50`}
           >
             {isSwitchPending ? "Switching…" : (chainId != null ? getChainName(chainId) : "Select network")}
@@ -41,7 +43,7 @@ export function WalletConnectButton() {
           {networkMenuOpen && (
             <>
               <div className="fixed inset-0 z-10" aria-hidden onClick={() => setNetworkMenuOpen(false)} />
-              <ul className="absolute right-0 top-full mt-1 py-1 bg-white border border-gray-200 rounded shadow-lg z-20 min-w-[140px]">
+              <ul className="absolute right-0 top-full mt-1 py-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 min-w-[140px] dark:bg-slate-900 dark:border-slate-600">
                 {supportedChains.map((ch) => (
                   <li key={ch.id}>
                     <button
@@ -50,7 +52,7 @@ export function WalletConnectButton() {
                         switchChain?.({ chainId: ch.id });
                         setNetworkMenuOpen(false);
                       }}
-                      className={`block w-full text-left px-3 py-2 text-sm hover:bg-gray-100 ${chainId === ch.id ? "font-medium text-indigo-600" : "text-gray-700"}`}
+                      className={`block w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-slate-800 ${chainId === ch.id ? "font-medium text-indigo-600 dark:text-indigo-400" : "text-gray-700 dark:text-slate-300"}`}
                     >
                       {ch.name}
                     </button>
@@ -60,13 +62,13 @@ export function WalletConnectButton() {
             </>
           )}
         </div>
-        <span className="truncate text-sm text-slate-600 font-mono" title={address}>
+        <span className="truncate text-sm text-slate-600 font-mono dark:text-slate-400" title={address}>
           {address.slice(0, 6)}…{address.slice(-4)}
         </span>
         <button
           type="button"
           onClick={() => disconnect()}
-          className="w-full shrink-0 rounded-lg border border-slate-200 px-3 py-2 text-sm hover:bg-slate-50 sm:w-auto"
+          className="w-full shrink-0 rounded-lg border border-slate-200 px-3 py-2 text-sm hover:bg-slate-50 dark:border-slate-600 dark:hover:bg-slate-800 dark:text-slate-200 sm:w-auto"
         >
           Disconnect
         </button>
@@ -76,7 +78,7 @@ export function WalletConnectButton() {
 
   if (hasNoWallet) {
     return (
-      <div className="text-sm text-amber-700 bg-amber-50 px-3 py-2 rounded" role="status">
+      <div className="text-sm text-amber-800 bg-amber-50 px-3 py-2 rounded dark:bg-amber-950/50 dark:text-amber-200 dark:ring-1 dark:ring-amber-800/50" role="status">
         No wallet found. Install{" "}
         <a
           href="https://metamask.io"
@@ -94,7 +96,7 @@ export function WalletConnectButton() {
   return (
     <div className="flex w-full max-w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
       {connectError && !dismissedError && (
-        <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 px-2 py-1 rounded">
+        <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 px-2 py-1 rounded dark:bg-red-950/40 dark:text-red-300">
           <span>{getConnectionErrorMessage(connectError)}</span>
           <button
             type="button"

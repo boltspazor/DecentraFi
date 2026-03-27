@@ -52,8 +52,8 @@ function DashboardRow({ item }: { item: UserContributionSummary }) {
     <li className={`${cardInteractive} flex flex-col gap-2`}>
       <div className="flex justify-between items-center">
         <div>
-          <h3 className="text-sm font-semibold text-gray-900">{item.title || "Untitled"}</h3>
-          <p className="text-xs text-gray-500">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-slate-100">{item.title || "Untitled"}</h3>
+          <p className="text-xs text-gray-500 dark:text-slate-400">
             Contributed: {formatEth(item.amountWei)} ETH • Status:{" "}
             <span className="font-medium">{item.status}</span>
           </p>
@@ -66,21 +66,21 @@ function DashboardRow({ item }: { item: UserContributionSummary }) {
         </Link>
       </div>
       <div>
-        <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+        <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden dark:bg-slate-800">
           <div
-            className="h-full bg-indigo-500 rounded-full"
+            className="h-full bg-indigo-500 rounded-full dark:bg-indigo-400"
             style={{ width: `${Math.min(progressPercent, 100)}%` }}
           />
         </div>
-        <p className="mt-1 text-[11px] text-gray-500">
+        <p className="mt-1 text-[11px] text-gray-500 dark:text-slate-500">
           Progress: {progressPercent}% • Your share: {formatEth(myContribution.toString())} ETH
         </p>
       </div>
-      <div className="flex justify-between items-center text-xs text-gray-600">
+      <div className="flex justify-between items-center text-xs text-gray-600 dark:text-slate-400">
         {refundEligible ? (
-          <span className="text-amber-700 font-medium">Refund eligible</span>
+          <span className="text-amber-700 font-medium dark:text-amber-400">Refund eligible</span>
         ) : (
-          <span className="text-gray-400">Refund not available</span>
+          <span className="text-gray-400 dark:text-slate-600">Refund not available</span>
         )}
       </div>
     </li>
@@ -117,8 +117,8 @@ export function Dashboard() {
   if (!isConnected || !address) {
     return (
       <PageShell maxWidth="medium">
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Your dashboard</h1>
-        <p className="mt-3 text-slate-600">
+        <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Your dashboard</h1>
+        <p className="mt-3 text-slate-600 dark:text-slate-400">
           Connect your wallet to view campaigns you have funded.
         </p>
       </PageShell>
@@ -130,19 +130,19 @@ export function Dashboard() {
 
   return (
     <PageShell maxWidth="medium">
-      <h1 className="text-3xl font-bold tracking-tight text-slate-900">Your dashboard</h1>
-      <p className="mt-2 text-slate-600">
+      <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Your dashboard</h1>
+      <p className="mt-2 text-slate-600 dark:text-slate-400">
         Campaigns you have contributed to and your supporter badge NFTs.
       </p>
       <div className="mt-8 space-y-8">
 
-      {isLoading && <p className="text-gray-500">Loading your contributions…</p>}
+      {isLoading && <p className="text-gray-500 dark:text-slate-400">Loading your contributions…</p>}
       {!isLoading && error && (
-        <div className="mb-4 p-3 rounded bg-red-50 text-red-700 border border-red-200 text-sm">
+        <div className="mb-4 p-3 rounded bg-red-50 text-red-700 border border-red-200 text-sm dark:bg-red-950/40 dark:text-red-300 dark:border-red-900/50">
           <p>Failed to load your contributions.</p>
           <button
             type="button"
-            className="mt-2 px-3 py-1 rounded bg-red-100 hover:bg-red-200"
+            className="mt-2 px-3 py-1 rounded bg-red-100 hover:bg-red-200 dark:bg-red-900/50 dark:hover:bg-red-900/70"
             onClick={() => refetch()}
           >
             Retry
@@ -150,12 +150,12 @@ export function Dashboard() {
         </div>
       )}
       {!isLoading && !error && list.length === 0 && (
-        <p className="text-gray-500">You have not contributed to any campaigns yet.</p>
+        <p className="text-gray-500 dark:text-slate-400">You have not contributed to any campaigns yet.</p>
       )}
       {!error && list.length > 0 && (
         <>
           {isFetching && (
-            <p className="text-xs text-gray-400 mb-2">Updating latest contributions…</p>
+            <p className="text-xs text-gray-400 mb-2 dark:text-slate-500">Updating latest contributions…</p>
           )}
           <ul className="space-y-3">
             {list.map((item) => (
@@ -165,14 +165,14 @@ export function Dashboard() {
         </>
       )}
 
-      <div className="border-t border-slate-200 pt-8">
-        <h2 className="text-xl font-bold text-slate-900">Supporter badge NFTs</h2>
-        {isLoadingNfts && <p className="text-gray-500">Loading your supporter NFTs…</p>}
+      <div className="border-t border-slate-200 pt-8 dark:border-slate-800">
+        <h2 className="text-xl font-bold text-slate-900 dark:text-white">Supporter badge NFTs</h2>
+        {isLoadingNfts && <p className="text-gray-500 dark:text-slate-400">Loading your supporter NFTs…</p>}
         {!isLoadingNfts && nftError && (
           <p className="text-sm text-red-600">Failed to load your supporter NFTs.</p>
         )}
         {!isLoadingNfts && !nftError && nftList.length === 0 && (
-          <p className="text-gray-500 text-sm">
+          <p className="text-gray-500 text-sm dark:text-slate-400">
             You do not have any supporter badge NFTs yet. Contribute to campaigns to earn Bronze,
             Silver, or Gold badges.
           </p>
@@ -194,17 +194,17 @@ export function Dashboard() {
               return (
                 <li
                   key={`${nft.tokenId}-${nft.campaignId}-${nft.createdAt}`}
-                  className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between dark:border-slate-700 dark:bg-slate-900/50"
                 >
                   <div>
-                    <p className="font-medium text-gray-900">
+                    <p className="font-medium text-gray-900 dark:text-slate-100">
                       {levelLabel} Supporter Badge • Token #{nft.tokenId}
                     </p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-500 dark:text-slate-400">
                       Campaign ID:{" "}
                       <Link
                         to={`/campaigns/${nft.campaignId}`}
-                        className="text-indigo-600 hover:underline"
+                        className="text-indigo-600 hover:underline dark:text-indigo-400"
                       >
                         {nft.campaignId}
                       </Link>
@@ -215,7 +215,7 @@ export function Dashboard() {
                       href={ipfsUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs text-indigo-600 hover:underline"
+                      className="text-xs text-indigo-600 hover:underline dark:text-indigo-400"
                     >
                       View NFT
                     </a>
