@@ -4,17 +4,19 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsc",
+    "build": "tsc && npm run seed",
     "start": "node dist/server.js",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand",
     "test:qf": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand __tests__/qfService.test.ts",
-    "test:did": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand __tests__/creatorController.test.ts"
+    "test:did": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand __tests__/creatorController.test.ts",
+    "seed": "tsx scripts/seed.ts"
   },
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.21.0",
     "pg": "^8.13.0",
-    "redis": "^4.7.1"
+    "redis": "^4.7.1",
+    "tsx": "^4.19.2"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
@@ -26,7 +28,6 @@
     "jest": "^29.7.0",
     "supertest": "^7.0.0",
     "ts-jest": "^29.1.2",
-    "tsx": "^4.19.2",
     "typescript": "~5.6.2"
   }
 }
