@@ -12,7 +12,7 @@ function App() {
   return (
     <BrowserRouter>
       <Navbar />
-      <main>
+      <main className="min-h-[calc(100vh-4rem)] pb-12 sm:pb-16">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/create" element={<CreateCampaign />} />

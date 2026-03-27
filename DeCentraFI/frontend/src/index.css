@@ -3,9 +3,12 @@
 @tailwind utilities;
 
 :root {
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: Inter, system-ui, -apple-system, sans-serif;
   line-height: 1.5;
   font-weight: 400;
+  color-scheme: light;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 * {
@@ -16,8 +19,20 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  color: #0f172a;
+  background-color: #f8fafc;
+  background-image:
+    radial-gradient(ellipse 120% 80% at 50% -20%, rgb(199 210 254 / 35%), transparent),
+    radial-gradient(ellipse 80% 50% at 100% 0%, rgb(196 181 253 / 20%), transparent);
+  background-attachment: fixed;
 }
 
 #root {
   min-height: 100vh;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
 }

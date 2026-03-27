@@ -26,14 +26,14 @@ export function WalletConnectButton() {
 
   if (isConnected && address) {
     return (
-      <div className="flex items-center gap-2 flex-wrap">
-        <div className="relative">
+      <div className="flex w-full max-w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
+        <div className="relative w-full sm:w-auto">
           <button
             type="button"
             onClick={() => setNetworkMenuOpen((o) => !o)}
             disabled={isSwitchPending}
-            className={`px-3 py-1.5 text-sm rounded border ${
-              isWrongNetwork ? "bg-amber-600 text-white border-amber-600 hover:bg-amber-700" : "border-gray-300 hover:bg-gray-50"
+            className={`w-full px-3 py-2 text-sm sm:w-auto sm:py-1.5 rounded-lg border ${
+              isWrongNetwork ? "bg-amber-600 text-white border-amber-600 hover:bg-amber-700" : "border-slate-200 hover:bg-slate-50"
             } disabled:opacity-50`}
           >
             {isSwitchPending ? "Switching…" : (chainId != null ? getChainName(chainId) : "Select network")}
@@ -60,13 +60,13 @@ export function WalletConnectButton() {
             </>
           )}
         </div>
-        <span className="text-sm text-gray-600 font-mono" title={address}>
+        <span className="truncate text-sm text-slate-600 font-mono" title={address}>
           {address.slice(0, 6)}…{address.slice(-4)}
         </span>
         <button
           type="button"
           onClick={() => disconnect()}
-          className="px-3 py-1.5 text-sm border border-gray-300 rounded hover:bg-gray-50"
+          className="w-full shrink-0 rounded-lg border border-slate-200 px-3 py-2 text-sm hover:bg-slate-50 sm:w-auto"
         >
           Disconnect
         </button>
@@ -92,7 +92,7 @@ export function WalletConnectButton() {
   }
 
   return (
-    <div className="flex items-center gap-2 flex-wrap">
+    <div className="flex w-full max-w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
       {connectError && !dismissedError && (
         <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 px-2 py-1 rounded">
           <span>{getConnectionErrorMessage(connectError)}</span>
@@ -112,7 +112,7 @@ export function WalletConnectButton() {
           type="button"
           disabled={isPending}
           onClick={() => connect({ connector })}
-          className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-wait text-sm font-medium"
+          className="w-full rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-wait disabled:opacity-50 sm:w-auto"
         >
           {isPending ? "Connecting…" : `Connect ${connector.name}`}
         </button>

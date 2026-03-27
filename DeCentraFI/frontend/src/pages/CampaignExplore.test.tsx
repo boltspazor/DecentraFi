@@ -111,8 +111,8 @@ describe("CampaignExplorePage (search & filters)", () => {
     await waitFor(() => {
       expect(screen.getByText(/education for all/i)).toBeInTheDocument();
     });
-    expect(screen.getByText(/goal:/i)).toBeInTheDocument();
-    expect(screen.getByText(/raised:/i)).toBeInTheDocument();
+    expect(screen.getByText(/goal\s+5/i)).toBeInTheDocument();
+    expect(screen.getByText(/raised\s+1/i)).toBeInTheDocument();
 
     expect(screen.getByRole("button", { name: /next/i })).toBeInTheDocument();
   });

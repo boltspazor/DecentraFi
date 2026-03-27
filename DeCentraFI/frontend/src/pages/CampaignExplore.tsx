@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { type CampaignMeta, type CampaignSearchResult, searchCampaigns } from "../services/api";
+import { PageShell } from "../components/PageShell";
+import { btnPrimary, btnSecondary, cardInteractive, inputClass } from "../styles/ui";
 
 function toWei(valueEth: string | undefined): string | undefined {
   if (!valueEth) return undefined;
@@ -35,32 +37,34 @@ function CampaignCard({ c }: { c: CampaignMeta }) {
       : c.creator || "—";
 
   return (
-    <Link to={`/campaigns/${c.id}`}>
-      <article className="p-4 border border-gray-200 rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow">
-        <div className="flex items-center gap-2 mb-1">
-          <h2 className="text-lg font-semibold text-gray-900">{c.title || "Untitled"}</h2>
+    <Link to={`/campaigns/${c.id}`} className="group block h-full">
+      <article className={`${cardInteractive} flex h-full flex-col group-hover:-translate-y-0.5`}>
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          <h2 className="text-lg font-semibold text-slate-900 transition group-hover:text-indigo-700">
+            {c.title || "Untitled"}
+          </h2>
           {c.isVerified && (
-            <span className="text-xs font-medium text-green-700 bg-green-100 px-1.5 py-0.5 rounded">
+            <span className="rounded-md bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
               ✔ Verified
             </span>
           )}
         </div>
-        <p className="text-xs text-gray-500 mb-2">
-          Creator: <span className="font-mono">{creator}</span>
+        <p className="mb-2 text-xs text-slate-500">
+          Creator <span className="font-mono text-slate-600">{creator}</span>
         </p>
-        <p className="mt-1 text-sm text-gray-600 line-clamp-2">{c.description || ""}</p>
-        <div className="mt-3 w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+        <p className="line-clamp-2 flex-1 text-sm leading-relaxed text-slate-600">{c.description || ""}</p>
+        <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-slate-100">
           <div
-            className="h-full bg-indigo-500 rounded-full"
+            className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500"
             style={{ width: `${progress}%` }}
           />
         </div>
-        <div className="mt-2 flex flex-wrap gap-3 text-xs text-gray-500">
-          <span>Goal: {goalEth} ETH</span>
-          <span>Raised: {raisedEth} ETH</span>
-          {c.status && <span className="text-indigo-600">{c.status}</span>}
+        <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
+          <span>Goal {goalEth} ETH</span>
+          <span>Raised {raisedEth} ETH</span>
+          {c.status && <span className="font-medium text-indigo-600">{c.status}</span>}
         </div>
-        <p className="mt-1 text-xs text-gray-500">
+        <p className="mt-2 text-xs text-slate-500">
           Deadline: {formatDate(c.deadline)}
         </p>
       </article>
@@ -146,22 +150,22 @@ export function CampaignExplorePage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold text-gray-900 mb-4">Explore Campaigns</h1>
-      <p className="text-gray-600 mb-6">
-        Search and filter campaigns by keyword, status, goal range, and deadline.
+    <PageShell maxWidth="wide">
+      <h1 className="text-3xl font-bold tracking-tight text-slate-900">Explore campaigns</h1>
+      <p className="mt-2 max-w-2xl text-slate-600">
+        Search and filter by keyword, status, goal range, and deadline.
       </p>
 
       <form
-        className="mb-6 grid gap-4 md:grid-cols-4 items-end"
+        className="mb-8 mt-8 grid gap-4 rounded-2xl border border-slate-200/90 bg-white p-4 shadow-soft sm:p-6 md:grid-cols-2 lg:grid-cols-4 items-end"
         onSubmit={(e) => {
           e.preventDefault();
           applyFilters(1);
           refetch();
         }}
       >
-        <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="keyword">
+        <div className="md:col-span-2 lg:col-span-2">
+          <label className="mb-1.5 block text-sm font-medium text-slate-700" htmlFor="keyword">
             Keyword
           </label>
           <input
@@ -169,19 +173,19 @@ export function CampaignExplorePage() {
             type="text"
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
-            placeholder="Search by title, description, or creator"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            placeholder="Title, description, or creator"
+            className={inputClass}
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="status">
+          <label className="mb-1.5 block text-sm font-medium text-slate-700" htmlFor="status">
             Status
           </label>
           <select
             id="status"
             value={status}
             onChange={(e) => setStatus(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            className={inputClass}
           >
             <option value="">Any</option>
             <option value="Active">Active</option>
@@ -190,7 +194,7 @@ export function CampaignExplorePage() {
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="deadline">
+          <label className="mb-1.5 block text-sm font-medium text-slate-700" htmlFor="deadline">
             Deadline before
           </label>
           <input
@@ -198,11 +202,11 @@ export function CampaignExplorePage() {
             type="datetime-local"
             value={deadlineBefore}
             onChange={(e) => setDeadlineBefore(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            className={inputClass}
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="goalMin">
+          <label className="mb-1.5 block text-sm font-medium text-slate-700" htmlFor="goalMin">
             Min goal (ETH)
           </label>
           <input
@@ -212,11 +216,11 @@ export function CampaignExplorePage() {
             step="0.01"
             value={goalMin}
             onChange={(e) => setGoalMin(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            className={inputClass}
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="goalMax">
+          <label className="mb-1.5 block text-sm font-medium text-slate-700" htmlFor="goalMax">
             Max goal (ETH)
           </label>
           <input
@@ -226,19 +230,16 @@ export function CampaignExplorePage() {
             step="0.01"
             value={goalMax}
             onChange={(e) => setGoalMax(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            className={inputClass}
           />
         </div>
-        <div className="md:col-span-2 flex gap-3">
-          <button
-            type="submit"
-            className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
-          >
+        <div className="flex flex-wrap gap-3 md:col-span-2 lg:col-span-4">
+          <button type="submit" className={btnPrimary}>
             Search
           </button>
           <button
             type="button"
-            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700"
+            className={btnSecondary}
             onClick={() => {
               setKeyword("");
               setStatus("");
@@ -255,7 +256,13 @@ export function CampaignExplorePage() {
         </div>
       </form>
 
-      {isLoading && <p className="text-gray-500">Loading campaigns…</p>}
+      {isLoading && (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-44 animate-pulse rounded-2xl bg-slate-100" />
+          ))}
+        </div>
+      )}
       {!isLoading && isFetching && <p className="text-sm text-gray-500 mb-2">Updating…</p>}
       {error && (
         <div className="p-3 rounded bg-red-50 text-red-700 border border-red-200 mb-4" role="alert">
@@ -281,14 +288,14 @@ export function CampaignExplorePage() {
               <CampaignCard key={c.id} c={c} />
             ))}
           </div>
-          <div className="flex items-center justify-between text-sm text-gray-600">
-            <span>
-              Page {data.page} of {totalPages} • {data.total} campaigns
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <span className="text-sm text-slate-600">
+              Page {data.page} of {totalPages} · {data.total} campaigns
             </span>
             <div className="flex gap-2">
               <button
                 type="button"
-                className="px-3 py-1 border border-gray-300 rounded disabled:opacity-50"
+                className={`${btnSecondary} px-3 py-1.5 text-sm disabled:opacity-40`}
                 onClick={() => goToPage(page - 1)}
                 disabled={page <= 1}
               >
@@ -296,7 +303,7 @@ export function CampaignExplorePage() {
               </button>
               <button
                 type="button"
-                className="px-3 py-1 border border-gray-300 rounded disabled:opacity-50"
+                className={`${btnSecondary} px-3 py-1.5 text-sm disabled:opacity-40`}
                 onClick={() => goToPage(page + 1)}
                 disabled={page >= totalPages}
               >
@@ -306,7 +313,7 @@ export function CampaignExplorePage() {
           </div>
         </>
       )}
-    </div>
+    </PageShell>
   );
 }
 

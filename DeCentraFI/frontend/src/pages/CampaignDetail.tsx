@@ -28,6 +28,7 @@ import { getTransactionErrorMessage } from "../utils/errorMessages";
 import { getBlockExplorerTxUrl } from "../utils/blockExplorer";
 import { SUPPORTED_CHAIN_IDS } from "../config/wagmiConfig";
 import { recordWalletTransaction } from "../services/walletTransactions";
+import { PageShell } from "../components/PageShell";
 
 function getChainName(chainId: number): string {
   switch (chainId) {
@@ -438,20 +439,28 @@ export function CampaignDetail() {
 
   if (loadingMeta) {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-8">
-        <p className="text-gray-500">Loading campaign…</p>
-      </div>
+      <PageShell maxWidth="medium">
+        <p className="text-slate-500">Loading campaign…</p>
+        <div className="mt-4 animate-pulse space-y-4" aria-hidden>
+          <div className="h-8 max-w-md rounded-lg bg-slate-200" />
+          <div className="h-24 rounded-2xl bg-slate-100" />
+          <div className="h-40 rounded-2xl bg-slate-100" />
+        </div>
+      </PageShell>
     );
   }
 
   if (errorMeta || !campaignMeta) {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-8">
+      <PageShell maxWidth="medium">
         <p className="text-red-600">{errorMeta ?? "Campaign not found"}</p>
-        <Link to="/" className="mt-4 inline-block text-indigo-600 hover:underline">
+        <Link
+          to="/"
+          className="mt-6 inline-flex font-medium text-indigo-600 hover:underline"
+        >
           ← Back to campaigns
         </Link>
-      </div>
+      </PageShell>
     );
   }
 
@@ -469,13 +478,16 @@ export function CampaignDetail() {
     })) ?? [];
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
-      <Link to="/" className="text-indigo-600 hover:underline mb-6 inline-block">
+    <PageShell maxWidth="medium">
+      <Link
+        to="/"
+        className="mb-6 inline-flex text-sm font-medium text-indigo-600 hover:underline"
+      >
         ← Back to campaigns
       </Link>
 
       <div className="flex flex-wrap items-center gap-2 mb-2">
-        <h1 className="text-2xl font-bold text-gray-900">{campaignMeta.title}</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-slate-900">{campaignMeta.title}</h1>
         {campaignMeta.isVerified && (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-sm font-medium bg-green-100 text-green-800">
             ✔ Verified Campaign
@@ -487,9 +499,9 @@ export function CampaignDetail() {
           </span>
         )}
       </div>
-      <p className="text-gray-600 whitespace-pre-wrap mb-6">{campaignMeta.description}</p>
+      <p className="text-slate-600 whitespace-pre-wrap mb-6 leading-relaxed">{campaignMeta.description}</p>
 
-      <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+      <div className="mb-6 rounded-2xl border border-slate-200/80 bg-gradient-to-br from-slate-50 to-white p-5 shadow-soft sm:p-6">
         <div className="flex justify-between text-sm mb-2">
           <span>Goal: {goalEth} ETH</span>
           <span>Raised: {raisedEth} ETH (this chain)</span>
@@ -526,8 +538,8 @@ export function CampaignDetail() {
         )}
       </div>
 
-      <div className="mb-6 p-4 bg-white rounded-lg border border-gray-200">
-        <h2 className="text-lg font-semibold mb-2">Campaign Analytics</h2>
+      <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+        <h2 className="text-lg font-bold text-slate-900">Campaign analytics</h2>
         {analyticsLoading && <p className="text-sm text-gray-500">Loading analytics…</p>}
         {analyticsError && !analyticsLoading && (
           <p className="text-sm text-red-600">Failed to load analytics.</p>
@@ -902,6 +914,6 @@ export function CampaignDetail() {
           </ul>
         )}
       </section>
-    </div>
+    </PageShell>
   );
 }

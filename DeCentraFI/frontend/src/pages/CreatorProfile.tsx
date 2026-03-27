@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { getCreatorHistory, getCreatorProfile } from "../services/api";
+import { PageShell } from "../components/PageShell";
 
 function shortAddr(a: string) {
   return a.length > 10 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a;
@@ -25,28 +26,28 @@ export function CreatorProfile() {
 
   if (!normalized) {
     return (
-      <div className="p-6 max-w-5xl mx-auto">
-        <h1 className="text-2xl font-bold">Creator profile</h1>
-        <p className="mt-2 text-gray-600">No wallet provided.</p>
-      </div>
+      <PageShell>
+        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Creator profile</h1>
+        <p className="mt-2 text-slate-600">No wallet provided.</p>
+      </PageShell>
     );
   }
 
   if (profileQ.isLoading || historyQ.isLoading) {
     return (
-      <div className="p-6 max-w-5xl mx-auto">
-        <h1 className="text-2xl font-bold">Creator profile</h1>
-        <p className="mt-2 text-gray-600">Loading…</p>
-      </div>
+      <PageShell>
+        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Creator profile</h1>
+        <p className="mt-4 text-slate-500">Loading…</p>
+      </PageShell>
     );
   }
 
   if (profileQ.error) {
     return (
-      <div className="p-6 max-w-5xl mx-auto">
-        <h1 className="text-2xl font-bold">Creator profile</h1>
+      <PageShell>
+        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Creator profile</h1>
         <p className="mt-2 text-red-600">Failed to load profile.</p>
-      </div>
+      </PageShell>
     );
   }
 
@@ -54,8 +55,9 @@ export function CreatorProfile() {
   const campaigns = historyQ.data?.campaigns ?? [];
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-6">
-      <div className="rounded-xl border bg-white p-5">
+    <PageShell>
+      <div className="space-y-6">
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-soft">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold">
@@ -106,8 +108,8 @@ export function CreatorProfile() {
         </div>
       </div>
 
-      <div className="rounded-xl border bg-white p-5">
-        <h2 className="text-lg font-semibold">Campaign history</h2>
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft sm:p-6">
+        <h2 className="text-lg font-bold text-slate-900">Campaign history</h2>
         {historyQ.error ? (
           <p className="mt-2 text-red-600">Failed to load history.</p>
         ) : campaigns.length === 0 ? (
@@ -147,7 +149,8 @@ export function CreatorProfile() {
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </PageShell>
   );
 }
 

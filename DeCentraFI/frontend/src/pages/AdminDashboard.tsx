@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { useAccount } from "wagmi";
 import { Link } from "react-router-dom";
 import * as api from "../services/api";
+import { PageShell } from "../components/PageShell";
+import { btnPrimary, cardInteractive } from "../styles/ui";
 
 const ADMIN_WALLET = (import.meta.env.VITE_ADMIN_WALLET as string)?.toLowerCase();
 
@@ -50,56 +52,58 @@ export function AdminDashboard() {
 
   if (!isConnected || !address) {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-4">Admin Dashboard</h1>
-        <p className="text-gray-600">Connect your wallet to access the admin dashboard.</p>
-      </div>
+      <PageShell maxWidth="narrow">
+        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Admin</h1>
+        <p className="mt-3 text-slate-600">Connect your wallet to access the admin dashboard.</p>
+      </PageShell>
     );
   }
 
   if (!ADMIN_WALLET || !isAdmin) {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-4">Admin Dashboard</h1>
-        <p className="text-gray-600">You do not have permission to view this page.</p>
-      </div>
+      <PageShell maxWidth="narrow">
+        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Admin</h1>
+        <p className="mt-3 text-slate-600">You do not have permission to view this page.</p>
+      </PageShell>
     );
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold text-gray-900 mb-4">Admin Dashboard</h1>
-      <p className="text-gray-600 mb-6">
-        View reported campaigns and verify them. Only the configured admin wallet can verify.
+    <PageShell maxWidth="narrow">
+      <h1 className="text-3xl font-bold tracking-tight text-slate-900">Admin</h1>
+      <p className="mt-2 text-slate-600">
+        Review reported campaigns and verify them. Only the configured admin wallet can verify.
       </p>
 
       {error && (
-        <div className="mb-4 p-3 rounded bg-red-50 text-red-700 border border-red-200 text-sm">
+        <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
           {error}
         </div>
       )}
 
       {loading ? (
-        <p className="text-gray-500">Loading reported campaigns…</p>
+        <p className="mt-8 text-slate-500">Loading reported campaigns…</p>
       ) : reported.length === 0 ? (
-        <p className="text-gray-500">No reported campaigns.</p>
+        <p className="mt-8 rounded-2xl border border-dashed border-slate-200 bg-white/60 px-4 py-10 text-center text-slate-600">
+          No reported campaigns.
+        </p>
       ) : (
-        <ul className="space-y-3">
+        <ul className="mt-8 space-y-4">
           {reported.map((c) => (
             <li
               key={c.id}
-              className="border border-gray-200 rounded-lg p-4 bg-white shadow-sm flex flex-wrap items-center justify-between gap-2"
+              className={`${cardInteractive} flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between`}
             >
-              <div>
+              <div className="min-w-0">
                 <Link
                   to={`/campaigns/${c.id}`}
                   className="font-semibold text-indigo-600 hover:underline"
                 >
                   {c.title}
                 </Link>
-                <p className="text-xs text-gray-500 font-mono mt-0.5">{c.campaignAddress}</p>
+                <p className="mt-1 break-all font-mono text-xs text-slate-500">{c.campaignAddress}</p>
                 {c.isVerified && (
-                  <span className="inline-block mt-1 text-xs font-medium text-green-700 bg-green-100 px-1.5 py-0.5 rounded">
+                  <span className="mt-2 inline-block rounded-md bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
                     ✔ Verified
                   </span>
                 )}
@@ -109,15 +113,15 @@ export function AdminDashboard() {
                   type="button"
                   disabled={verifyingId === c.id}
                   onClick={() => handleVerify(c.id)}
-                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 text-sm"
+                  className={`${btnPrimary} shrink-0 bg-emerald-600 hover:bg-emerald-700`}
                 >
-                  {verifyingId === c.id ? "Verifying…" : "Verify Campaign"}
+                  {verifyingId === c.id ? "Verifying…" : "Verify campaign"}
                 </button>
               )}
             </li>
           ))}
         </ul>
       )}
-    </div>
+    </PageShell>
   );
 }

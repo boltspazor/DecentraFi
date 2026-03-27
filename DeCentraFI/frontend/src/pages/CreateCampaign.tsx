@@ -7,6 +7,7 @@ import * as api from "../services/api";
 import { getTransactionErrorMessage } from "../utils/errorMessages";
 import { recordWalletTransaction } from "../services/walletTransactions";
 import { getBlockExplorerTxUrl } from "../utils/blockExplorer";
+import { PageShell } from "../components/PageShell";
 
 const SUPPORTED_CHAIN_IDS = [1, 11155111] as const;
 
@@ -126,8 +127,12 @@ export function CreateCampaign() {
   const canSubmit = isConnected && !isWrongNetwork && !isSubmitting;
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Create Campaign</h1>
+    <PageShell maxWidth="narrow">
+      <h1 className="text-3xl font-bold tracking-tight text-slate-900">Create campaign</h1>
+      <p className="mt-2 text-slate-600">
+        Deploy a new campaign contract and list it in the app.
+      </p>
+      <div className="mt-8">
 
       {successTxHash && (
         <div className="mb-4 p-4 rounded bg-green-50 text-green-800 border border-green-200" role="alert">
@@ -186,10 +191,11 @@ export function CreateCampaign() {
       />
 
       {canSubmit && (
-        <p className="mt-4 text-sm text-gray-500">
+        <p className="mt-4 text-sm text-slate-500">
           You will be asked to confirm the transaction in MetaMask. Ensure you are on Sepolia (test) or Ethereum mainnet.
         </p>
       )}
-    </div>
+      </div>
+    </PageShell>
   );
 }

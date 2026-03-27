@@ -7,6 +7,8 @@ import {
   type UserContributionSummary,
   type UserNft,
 } from "../services/api";
+import { PageShell } from "../components/PageShell";
+import { cardInteractive } from "../styles/ui";
 import { useCampaign } from "../services/campaignContract";
 import { useCampaignEvents } from "../services/campaignEvents";
 
@@ -47,7 +49,7 @@ function DashboardRow({ item }: { item: UserContributionSummary }) {
   const refundEligible = refundEnabled && myContribution > 0n;
 
   return (
-    <li className="border border-gray-200 rounded-lg p-4 bg-white shadow-sm flex flex-col gap-2">
+    <li className={`${cardInteractive} flex flex-col gap-2`}>
       <div className="flex justify-between items-center">
         <div>
           <h3 className="text-sm font-semibold text-gray-900">{item.title || "Untitled"}</h3>
@@ -114,12 +116,12 @@ export function Dashboard() {
 
   if (!isConnected || !address) {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-4">Your Dashboard</h1>
-        <p className="text-gray-600">
+      <PageShell maxWidth="medium">
+        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Your dashboard</h1>
+        <p className="mt-3 text-slate-600">
           Connect your wallet to view campaigns you have funded.
         </p>
-      </div>
+      </PageShell>
     );
   }
 
@@ -127,11 +129,12 @@ export function Dashboard() {
   const nftList = Array.isArray(nftData) ? nftData : [];
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold text-gray-900 mb-4">Your Dashboard</h1>
-      <p className="text-gray-600 mb-4">
-        Overview of campaigns you have contributed to and your Supporter Badge NFTs.
+    <PageShell maxWidth="medium">
+      <h1 className="text-3xl font-bold tracking-tight text-slate-900">Your dashboard</h1>
+      <p className="mt-2 text-slate-600">
+        Campaigns you have contributed to and your supporter badge NFTs.
       </p>
+      <div className="mt-8 space-y-8">
 
       {isLoading && <p className="text-gray-500">Loading your contributions…</p>}
       {!isLoading && error && (
@@ -162,8 +165,8 @@ export function Dashboard() {
         </>
       )}
 
-      <div className="mt-10 border-t border-gray-200 pt-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-3">Supporter Badge NFTs</h2>
+      <div className="border-t border-slate-200 pt-8">
+        <h2 className="text-xl font-bold text-slate-900">Supporter badge NFTs</h2>
         {isLoadingNfts && <p className="text-gray-500">Loading your supporter NFTs…</p>}
         {!isLoadingNfts && nftError && (
           <p className="text-sm text-red-600">Failed to load your supporter NFTs.</p>
@@ -191,7 +194,7 @@ export function Dashboard() {
               return (
                 <li
                   key={`${nft.tokenId}-${nft.campaignId}-${nft.createdAt}`}
-                  className="flex items-center justify-between bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                  className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div>
                     <p className="font-medium text-gray-900">
@@ -223,7 +226,8 @@ export function Dashboard() {
           </ul>
         )}
       </div>
-    </div>
+      </div>
+    </PageShell>
   );
 }
 

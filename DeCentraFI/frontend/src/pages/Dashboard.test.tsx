@@ -69,7 +69,7 @@ describe("Dashboard", () => {
     renderDashboard();
     expect(screen.getByRole("heading", { name: /your dashboard/i })).toBeInTheDocument();
     expect(
-      screen.getByText(/overview of campaigns you have contributed to and your supporter badge nfts/i)
+      screen.getByText(/campaigns you have contributed to and your supporter badge nfts/i)
     ).toBeInTheDocument();
     await waitFor(() => {
       expect(getUserContributions).toHaveBeenCalledWith("0x1234567890123456789012345678901234567890");

@@ -3,6 +3,8 @@ import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAccount } from "wagmi";
 import { getCampaigns, getRecommendations, type CampaignMeta } from "../services/api";
+import { PageShell } from "../components/PageShell";
+import { cardInteractive } from "../styles/ui";
 
 function CampaignCard({ c }: { c: CampaignMeta }) {
   const goalNum = Number(c.goal);
@@ -14,30 +16,40 @@ function CampaignCard({ c }: { c: CampaignMeta }) {
     ? `${c.creator.slice(0, 6)}…${c.creator.slice(-4)}`
     : "—";
   return (
-    <Link to={`/campaigns/${c.id}`}>
-      <article className="p-4 border border-gray-200 rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow">
-        <h2 className="text-lg font-semibold text-gray-900">{c.title || "Untitled"}</h2>
-        <p className="mt-1 text-sm text-gray-600 line-clamp-2">{c.description || ""}</p>
-        <div className="mt-2 w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+    <Link to={`/campaigns/${c.id}`} className="group block h-full animate-fade-in">
+      <article
+        className={`${cardInteractive} flex h-full flex-col group-hover:-translate-y-0.5`}
+      >
+        <h2 className="text-lg font-semibold leading-snug text-slate-900 transition group-hover:text-indigo-700">
+          {c.title || "Untitled"}
+        </h2>
+        <p className="mt-2 line-clamp-2 flex-1 text-sm leading-relaxed text-slate-600">
+          {c.description || ""}
+        </p>
+        <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-slate-100">
           <div
-            className="h-full bg-indigo-500 rounded-full"
+            className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 transition-all duration-500"
             style={{ width: `${progress}%` }}
           />
         </div>
-        <div className="mt-3 flex flex-wrap gap-3 text-xs text-gray-500">
+        <div className="mt-4 flex flex-wrap gap-x-3 gap-y-1.5 text-xs text-slate-500">
           {c.category && (
-            <span className="px-1.5 py-0.5 rounded bg-gray-100 text-gray-700">{c.category}</span>
+            <span className="rounded-md bg-indigo-50 px-2 py-0.5 font-medium text-indigo-800">
+              {c.category}
+            </span>
           )}
-          <span>Goal: {goalEth} ETH</span>
-          <span>Raised: {raisedEth} ETH</span>
-          <span>Creator: {creator}</span>
-          {c.status && <span className="text-indigo-600">{c.status}</span>}
+          <span>Goal {goalEth} ETH</span>
+          <span>Raised {raisedEth} ETH</span>
+          <span className="font-mono text-[11px] text-slate-400">{creator}</span>
+          {c.status && (
+            <span className="font-medium text-indigo-600">{c.status}</span>
+          )}
           {c.txHash && (
             <a
               href={`https://sepolia.etherscan.io/tx/${c.txHash}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-indigo-600 hover:underline"
+              className="font-medium text-indigo-600 underline-offset-2 hover:underline"
               onClick={(e) => e.stopPropagation()}
             >
               View tx
@@ -76,26 +88,52 @@ export function Home() {
   const errorMessage = error instanceof Error ? error.message : "Failed to load campaigns";
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold text-gray-900 mb-2">DecentraFI</h1>
-      <p className="text-gray-600 mb-8">
-        Decentralized crowdfunding on Sepolia. Connect your wallet and create or fund campaigns.
-      </p>
+    <PageShell>
+      <section className="relative mb-10 overflow-hidden rounded-3xl border border-indigo-100/80 bg-gradient-to-br from-white via-indigo-50/50 to-violet-50/60 px-6 py-10 shadow-soft sm:px-10 sm:py-12">
+        <div className="relative max-w-2xl">
+          <p className="text-sm font-semibold uppercase tracking-wide text-indigo-600">Crowdfunding on-chain</p>
+          <h1 className="mt-2 text-balance text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+            Fund ideas that matter — transparently, on Ethereum.
+          </h1>
+          <p className="mt-4 text-pretty text-base leading-relaxed text-slate-600 sm:text-lg">
+            DecentraFI connects creators and backers with wallet-native flows. Create a campaign, contribute
+            with ETH, and track everything on Sepolia or mainnet.
+          </p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link
+              to="/explore"
+              className="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
+            >
+              Explore campaigns
+            </Link>
+            <Link
+              to="/create"
+              className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50"
+            >
+              Start a campaign
+            </Link>
+          </div>
+        </div>
+      </section>
 
       {address && (
-        <section className="mb-10">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">Recommended Campaigns</h2>
-          <p className="text-sm text-gray-500 mb-4">
+        <section className="mb-12">
+          <h2 className="text-xl font-bold text-slate-900">Recommended for you</h2>
+          <p className="mt-1 text-sm text-slate-600">
             Based on your contributions and similar campaigns.
           </p>
-          {recommendationsLoading && <p className="text-gray-500">Loading recommendations…</p>}
+          {recommendationsLoading && (
+            <p className="mt-6 text-slate-500">Loading recommendations…</p>
+          )}
           {!recommendationsLoading && recommendedList.length === 0 && (
-            <p className="text-gray-500">No recommendations yet. Explore campaigns or contribute to get personalized picks.</p>
+            <p className="mt-6 rounded-2xl border border-dashed border-slate-200 bg-white/60 px-4 py-8 text-center text-slate-600">
+              No recommendations yet. Explore campaigns or contribute to get personalized picks.
+            </p>
           )}
           {!recommendationsLoading && recommendedList.length > 0 && (
-            <ul className="grid gap-4 sm:grid-cols-2">
+            <ul className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {recommendedList.map((c) => (
-                <li key={c.id}>
+                <li key={c.id} className="min-w-0">
                   <CampaignCard c={c} />
                 </li>
               ))}
@@ -105,36 +143,59 @@ export function Home() {
       )}
 
       <section>
-        <h2 className="text-lg font-semibold text-gray-800 mb-4">Campaigns</h2>
-        {isLoading && <p className="text-gray-500">Loading campaigns…</p>}
-        {!isLoading && isFetching && list.length > 0 && (
-          <p className="text-sm text-gray-500">Updating…</p>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-slate-900">All campaigns</h2>
+            <p className="text-sm text-slate-600">Discover projects raising on-chain.</p>
+          </div>
+          {!isLoading && isFetching && list.length > 0 && (
+            <span className="text-xs font-medium text-indigo-600">Refreshing…</span>
+          )}
+        </div>
+        {isLoading && (
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="h-48 animate-pulse rounded-2xl border border-slate-100 bg-slate-100/80"
+              />
+            ))}
+          </div>
         )}
         {error && (
-          <div className="p-3 rounded bg-red-50 text-red-700 border border-red-200" role="alert">
-            <p>{errorMessage}</p>
+          <div
+            className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-red-800"
+            role="alert"
+          >
+            <p className="font-medium">{errorMessage}</p>
             <button
               type="button"
               onClick={() => refetch()}
-              className="mt-2 px-3 py-1 text-sm bg-red-100 rounded hover:bg-red-200"
+              className="mt-3 rounded-lg bg-red-100 px-3 py-1.5 text-sm font-medium hover:bg-red-200"
             >
               Retry
             </button>
           </div>
         )}
         {!isLoading && !error && list.length === 0 && (
-          <p className="text-gray-500">No campaigns yet. Create the first one!</p>
+          <p className="mt-8 rounded-2xl border border-dashed border-slate-200 bg-white/60 px-4 py-10 text-center text-slate-600">
+            No campaigns yet.{" "}
+            <Link to="/create" className="font-semibold text-indigo-600 hover:underline">
+              Create the first one
+            </Link>
+            .
+          </p>
         )}
         {!error && list.length > 0 && (
-          <ul className="grid gap-4 sm:grid-cols-2">
+          <ul className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {list.map((c) => (
-              <li key={c.id}>
+              <li key={c.id} className="min-w-0">
                 <CampaignCard c={c} />
               </li>
             ))}
           </ul>
         )}
       </section>
-    </div>
+    </PageShell>
   );
 }
