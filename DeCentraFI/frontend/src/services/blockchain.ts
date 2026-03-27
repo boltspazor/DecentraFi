@@ -69,6 +69,7 @@ export function useCampaignFactory() {
     contract,
     createCampaign,
     hash,
+    chainId: sepolia.id,
     isPending: isPending || isConfirming,
     isSuccess,
     error,

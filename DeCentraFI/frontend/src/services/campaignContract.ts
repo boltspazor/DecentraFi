@@ -188,7 +188,7 @@ export function useContribute(campaignAddress: `0x${string}` | null, chainId: nu
     error,
     reset,
   } = useWriteContract();
-  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash, chainId });
+  const { isLoading: isConfirming, isSuccess, data: receipt } = useWaitForTransactionReceipt({ hash, chainId });
 
   function contribute(valueWei: bigint) {
     if (!campaignAddress) throw new Error("Campaign address required");
@@ -205,6 +205,8 @@ export function useContribute(campaignAddress: `0x${string}` | null, chainId: nu
   return {
     contribute,
     hash,
+    receipt,
+    chainId,
     isPending: isPending || isConfirming,
     isSuccess,
     error,

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useAccount, useSwitchChain } from "wagmi";
+import { parseEther } from "viem";
 import {
   useCampaign,
   useContribute,
@@ -26,6 +27,7 @@ import {
 import { getTransactionErrorMessage } from "../utils/errorMessages";
 import { getBlockExplorerTxUrl } from "../utils/blockExplorer";
 import { SUPPORTED_CHAIN_IDS } from "../config/wagmiConfig";
+import { recordWalletTransaction } from "../services/walletTransactions";
 
 function getChainName(chainId: number): string {
   switch (chainId) {
@@ -121,6 +123,7 @@ export function CampaignDetail() {
     isPending: isContributePending,
     isSuccess: isContributeSuccess,
     hash: contributeTxHash,
+    receipt: contributeReceipt,
     error: contributeTxError,
     reset: resetContribute,
     contributorAddress,
@@ -249,11 +252,25 @@ export function CampaignDetail() {
     if (processedTxRef.current === contributeTxHash) return;
     processedTxRef.current = contributeTxHash;
     const txHash = contributeTxHash;
-    const amountWei = contributeAmountEth
-      ? String(BigInt(Math.floor(parseFloat(contributeAmountEth) * 1e18)))
-      : "0";
+    const amountWei = contributeAmountEth ? parseEther(contributeAmountEth).toString() : "0";
     resetContribute();
     const chainIdForTx = currentChainId ?? 11155111;
+
+    recordWalletTransaction({
+      txHash,
+      chainId: chainIdForTx,
+      from: contributeReceipt?.from ?? contributorAddress,
+      to: contributeReceipt?.to ?? campaignAddress ?? undefined,
+      valueWei: amountWei,
+      gasUsedWei: contributeReceipt?.gasUsed ? contributeReceipt.gasUsed.toString() : undefined,
+      effectiveGasPriceWei: contributeReceipt?.effectiveGasPrice
+        ? contributeReceipt.effectiveGasPrice.toString()
+        : undefined,
+      blockNumber: contributeReceipt?.blockNumber ? contributeReceipt.blockNumber.toString() : undefined,
+      status: contributeReceipt?.status === "success" ? "success" : "reverted",
+      capturedAtIso: new Date().toISOString(),
+    });
+
     api
       .postContribution({
         campaignId: campaignMeta.id,
@@ -276,7 +293,18 @@ export function CampaignDetail() {
         processedTxRef.current = null;
         setContributeError(e instanceof Error ? e.message : "Failed to record contribution");
       });
-  }, [isContributeSuccess, contributeTxHash, campaignMeta, contributorAddress, contributeAmountEth, currentChainId, refetchChain, resetContribute]);
+  }, [
+    isContributeSuccess,
+    contributeTxHash,
+    campaignMeta,
+    contributorAddress,
+    contributeAmountEth,
+    currentChainId,
+    refetchChain,
+    resetContribute,
+    contributeReceipt,
+    campaignAddress,
+  ]);
 
   useEffect(() => {
     if (isWithdrawSuccess) {
@@ -324,8 +352,7 @@ export function CampaignDetail() {
       );
       return;
     }
-    const num = parseFloat(contributeAmountEth);
-    if (Number.isNaN(num) || num <= 0) {
+    if (!contributeAmountEth.trim()) {
       setContributeError("Enter a valid amount greater than zero");
       return;
     }
@@ -333,9 +360,15 @@ export function CampaignDetail() {
       setContributeError("This campaign is no longer accepting contributions");
       return;
     }
-    const valueWei = BigInt(Math.floor(num * 1e18));
+    let valueWei = 0n;
+    try {
+      valueWei = parseEther(contributeAmountEth);
+    } catch {
+      setContributeError("Enter a valid amount greater than zero");
+      return;
+    }
     if (valueWei <= 0n) {
-      setContributeError("Amount must be greater than zero");
+      setContributeError("Enter a valid amount greater than zero");
       return;
     }
     try {

@@ -6,6 +6,7 @@ import { CampaignForm, CampaignFormData } from "../components/CampaignForm";
 import { useCampaignFactory } from "../services/blockchain";
 import * as api from "../services/api";
 import { getTransactionErrorMessage } from "../utils/errorMessages";
+import { recordWalletTransaction } from "../services/walletTransactions";
 
 const SEPOLIA_ETHERSCAN = "https://sepolia.etherscan.io/tx/";
 
@@ -18,6 +19,8 @@ export function CreateCampaign() {
     isPending: isTxPending,
     isSuccess: isTxSuccess,
     hash: txHash,
+    chainId: txChainId,
+    receipt,
     getCampaignAddressFromReceipt,
     error: txError,
     reset: resetTx,
@@ -66,6 +69,19 @@ export function CreateCampaign() {
     if (!isTxSuccess || !txHash || savedRef.current) return;
     const campaignAddress = getCampaignAddressFromReceipt();
     if (!campaignAddress) return;
+
+    recordWalletTransaction({
+      txHash,
+      chainId: txChainId,
+      from: receipt?.from,
+      to: receipt?.to ?? undefined,
+      valueWei: "0",
+      gasUsedWei: receipt?.gasUsed ? receipt.gasUsed.toString() : undefined,
+      effectiveGasPriceWei: receipt?.effectiveGasPrice ? receipt.effectiveGasPrice.toString() : undefined,
+      blockNumber: receipt?.blockNumber ? receipt.blockNumber.toString() : undefined,
+      status: receipt?.status === "success" ? "success" : "reverted",
+      capturedAtIso: new Date().toISOString(),
+    });
 
     const formData = sessionStorage.getItem("decentrafi_create_form");
     if (!formData) return;
