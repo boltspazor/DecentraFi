@@ -1,18 +1,30 @@
+# Local full stack: Postgres + Redis + API + static frontend.
+# Prerequisites: deploy contracts once (see blockchain/README or hardhat), then set factory addresses below.
+#
+# Usage:
+#   cp .env.docker.example .env.docker
+#   # Edit .env.docker: factory addresses + ADMIN_WALLET (same wallet in backend + VITE_ADMIN_WALLET)
+#   docker compose --env-file .env.docker up --build
+#
+# Frontend (browser) → http://localhost:3000  |  API → http://localhost:3001
+# For local dev without Docker: run Postgres (or this compose with only postgres+redis),
+#   then backend `npm run dev`, frontend `npm run dev`, Hardhat node or Sepolia RPC separately.
+
 services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: decentrafi
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: decentrafi
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - decentrafi_pg:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d decentrafi"]
       interval: 5s
-      timeout: 3s
+      timeout: 5s
       retries: 10
 
   redis:
@@ -20,50 +32,48 @@ services:
     ports:
       - "6379:6379"
     command: ["redis-server", "--appendonly", "yes"]
-    volumes:
-      - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
-      retries: 20
+      retries: 10
 
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
     environment:
       HOST: 0.0.0.0
       PORT: 3001
       NODE_ENV: production
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/decentrafi
       REDIS_URL: redis://redis:6379
-      FRONTEND_URL: http://localhost:5173,http://frontend:3000,http://localhost:3000
-      CACHE_TTL_CAMPAIGNS_LIST_SECONDS: 30
-      CACHE_TTL_CAMPAIGNS_SEARCH_SECONDS: 20
-      CACHE_TTL_CAMPAIGN_DETAIL_SECONDS: 20
-      CACHE_TTL_RECOMMENDATIONS_SECONDS: 60
-      CACHE_TTL_REPORTS_SECONDS: 30
-      CACHE_TTL_REPORTED_CAMPAIGNS_SECONDS: 30
-    ports:
-      - "3001:3001"
+      FRONTEND_URL: http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173
+      ADMIN_WALLET: ${ADMIN_WALLET:-}
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:3001/health | grep -q ok"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3001/health | grep -q ok"]
       interval: 10s
       timeout: 5s
       retries: 10
+      start_period: 15s
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        VITE_API_URL: http://backend:3001
+        VITE_API_URL: http://localhost:3001
+        VITE_CHAIN_ID: ${VITE_CHAIN_ID:-11155111}
+        VITE_CAMPAIGN_FACTORY_ADDRESS_SEPOLIA: ${VITE_CAMPAIGN_FACTORY_ADDRESS_SEPOLIA:-}
+        VITE_CAMPAIGN_FACTORY_ADDRESS_MAINNET: ${VITE_CAMPAIGN_FACTORY_ADDRESS_MAINNET:-}
+        VITE_ADMIN_WALLET: ${VITE_ADMIN_WALLET:-}
     ports:
       - "3000:3000"
     depends_on:
@@ -71,5 +81,4 @@ services:
         condition: service_healthy
 
 volumes:
-  postgres_data:
-  redis_data:
+  decentrafi_pg:

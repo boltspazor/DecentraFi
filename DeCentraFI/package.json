@@ -1,0 +1,11 @@
+{
+  "name": "decentrafi-stack",
+  "private": true,
+  "description": "Meta-scripts for blockchain + backend + frontend integration",
+  "scripts": {
+    "verify:build": "npm run build --prefix blockchain && npm run build --prefix backend && npm run build --prefix frontend",
+    "verify:http": "node scripts/verify-stack.mjs",
+    "docker:up": "docker compose up --build",
+    "docker:down": "docker compose down"
+  }
+}

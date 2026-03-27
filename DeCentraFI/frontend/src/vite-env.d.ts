@@ -7,6 +7,9 @@ interface ImportMetaEnv {
   readonly VITE_CHAIN_ID?: string;
   readonly VITE_RPC_URL?: string;
   readonly VITE_CAMPAIGN_FACTORY_ADDRESS?: string;
+  readonly VITE_CAMPAIGN_FACTORY_ADDRESS_SEPOLIA?: string;
+  readonly VITE_CAMPAIGN_FACTORY_ADDRESS_MAINNET?: string;
+  readonly VITE_ADMIN_WALLET?: string;
   readonly VITE_WALLETCONNECT_PROJECT_ID?: string;
   readonly VITE_POLYGON_RPC_URL?: string;
   readonly VITE_ARBITRUM_RPC_URL?: string;
