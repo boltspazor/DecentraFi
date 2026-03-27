@@ -2,16 +2,43 @@ import pg from "pg";
 
 const { Pool } = pg;
 
+const LOCAL_DEV_FALLBACK =
+  "postgresql://postgres:postgres@localhost:5432/decentrafi";
+
+function isRailwayRuntime(): boolean {
+  return Boolean(
+    process.env.RAILWAY_ENVIRONMENT_ID ||
+      process.env.RAILWAY_PROJECT_ID ||
+      process.env.RAILWAY_SERVICE_ID
+  );
+}
+
 /**
- * Railway: reference Postgres variables from the database service (e.g. ${{ Postgres.DATABASE_URL }}).
- * Newer Railway Postgres: DATABASE_URL is typically the private URL; DATABASE_PUBLIC_URL is public.
+ * Railway: add a variable on the **backend** service that references Postgres, e.g.
+ * DATABASE_URL = ${{ Postgres.DATABASE_URL }} (use your actual Postgres service name).
+ * Do not rely on localhost — there is no Postgres on 127.0.0.1 inside the container.
  */
 function getDatabaseUrl(): string {
   const url =
     process.env.DATABASE_URL?.trim() ||
     process.env.DATABASE_PRIVATE_URL?.trim() ||
     process.env.DATABASE_PUBLIC_URL?.trim();
-  return url || "postgresql://postgres:postgres@localhost:5432/decentrafi";
+  if (url) return url;
+
+  const useLocalFallback =
+    process.env.NODE_ENV !== "production" &&
+    !isRailwayRuntime() &&
+    process.env.DATABASE_URL_REQUIRED !== "true";
+
+  if (useLocalFallback) {
+    return LOCAL_DEV_FALLBACK;
+  }
+
+  throw new Error(
+    "DATABASE_URL is not set (or is empty). On Railway: open your backend service → Variables → " +
+      "add DATABASE_URL and use 'Reference variable' to point at your Postgres plugin's DATABASE_URL. " +
+      "Service names in references must match (e.g. ${{ Postgres.DATABASE_URL }} if the database service is named Postgres)."
+  );
 }
 
 const connectionString = getDatabaseUrl();

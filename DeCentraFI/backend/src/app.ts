@@ -11,11 +11,22 @@ import { pool } from './config/db.js'
 
 const app = express()
 
-const frontendOrigin = process.env.FRONTEND_URL
+function corsOrigins(): true | string[] {
+  const raw = process.env.FRONTEND_URL?.trim()
+  if (!raw) return true
+  const list = raw
+    .split(',')
+    .map((u) => u.trim().replace(/\/+$/, ''))
+    .filter(Boolean)
+  return list.length > 0 ? list : true
+}
+
 app.use(
   cors({
-    origin: frontendOrigin ? frontendOrigin.split(',').map((u) => u.trim()) : true,
+    origin: corsOrigins(),
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   })
 )
 app.use(express.json())
