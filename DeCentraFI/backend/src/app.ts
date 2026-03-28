@@ -7,6 +7,7 @@ import analyticsRoutes from './routes/analyticsRoutes.js'
 import recommendationRoutes from './routes/recommendationRoutes.js'
 import qfRoutes from './routes/qfRoutes.js'
 import creatorRoutes from './routes/creatorRoutes.js'
+import adminRoutes from './routes/adminRoutes.js'
 import { pool } from './config/db.js'
 
 const app = express()
@@ -26,7 +27,7 @@ app.use(
     origin: corsOrigins(),
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Admin-Wallet'],
   })
 )
 app.use(express.json())
@@ -50,5 +51,6 @@ app.use('/api/analytics', analyticsRoutes)
 app.use('/api/recommendations', recommendationRoutes)
 app.use('/api/qf', qfRoutes)
 app.use('/api/creators', creatorRoutes)
+app.use('/api/admin', adminRoutes)
 
 export default app

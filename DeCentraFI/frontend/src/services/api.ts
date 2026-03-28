@@ -317,6 +317,17 @@ export async function getReportsByCampaignId(campaignId: number): Promise<Report
   return res.json();
 }
 
+/** GET /api/admin/status — whether connected wallet matches server ADMIN_WALLET */
+export async function getAdminStatus(address: string): Promise<{
+  isAdmin: boolean;
+  adminConfigured: boolean;
+}> {
+  const params = new URLSearchParams({ address: address.trim() });
+  const res = await fetch(`${API_BASE}/api/admin/status?${params}`);
+  if (!res.ok) throw new ApiError("Failed to fetch admin status", res.status);
+  return res.json();
+}
+
 export async function verifyCampaign(
   campaignId: number,
   adminWallet: string

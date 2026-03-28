@@ -162,6 +162,30 @@ describe("Fraud detection / moderation", () => {
     });
   });
 
+  describe("GET /api/admin/status", () => {
+    it("returns isAdmin true when address matches ADMIN_WALLET", async () => {
+      const res = await request(app).get("/api/admin/status").query({ address: validWallet });
+      if (res.status === 500) return;
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({ adminConfigured: true, isAdmin: true });
+    });
+
+    it("returns isAdmin false for other wallet", async () => {
+      const res = await request(app).get("/api/admin/status").query({ address: otherWallet });
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({ adminConfigured: true, isAdmin: false });
+    });
+
+    it("returns adminConfigured false when ADMIN_WALLET unset", async () => {
+      const prev = process.env.ADMIN_WALLET;
+      delete process.env.ADMIN_WALLET;
+      const res = await request(app).get("/api/admin/status").query({ address: validWallet });
+      process.env.ADMIN_WALLET = prev;
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ isAdmin: false, adminConfigured: false });
+    });
+  });
+
   describe("GET /api/campaigns/reports/:campaignId", () => {
     it("returns list of reports for campaign", async () => {
       if (!campaignId) return;

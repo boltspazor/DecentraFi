@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { useAccount } from "wagmi";
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import * as api from "../services/api";
 import { PageShell } from "../components/PageShell";
 import { btnPrimary, cardInteractive } from "../styles/ui";
 
-const ADMIN_WALLET = (import.meta.env.VITE_ADMIN_WALLET as string)?.toLowerCase();
+/** Optional build-time fallback; primary check is GET /api/admin/status (server ADMIN_WALLET). */
+const ENV_ADMIN_WALLET = (import.meta.env.VITE_ADMIN_WALLET as string | undefined)?.toLowerCase();
 
 export function AdminDashboard() {
   const { address, isConnected } = useAccount();
@@ -14,10 +16,34 @@ export function AdminDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [verifyingId, setVerifyingId] = useState<number | null>(null);
 
-  const isAdmin = isConnected && address && ADMIN_WALLET && address.toLowerCase() === ADMIN_WALLET;
+  const {
+    data: adminStatus,
+    isLoading: adminCheckLoading,
+    isError: adminCheckError,
+  } = useQuery({
+    queryKey: ["admin-status", address],
+    queryFn: () => api.getAdminStatus(address!),
+    enabled: !!address,
+    retry: 1,
+    staleTime: 60_000,
+  });
+
+  const envMatches =
+    !!address && !!ENV_ADMIN_WALLET && address.toLowerCase() === ENV_ADMIN_WALLET;
+  const isAdmin =
+    adminStatus?.isAdmin === true ||
+    (envMatches && (adminCheckError || adminStatus?.adminConfigured === false));
 
   useEffect(() => {
+    if (adminCheckLoading) return;
+    if (!isAdmin) {
+      setReported([]);
+      setLoading(false);
+      return;
+    }
     let cancelled = false;
+    setLoading(true);
+    setError(null);
     api
       .getReportedCampaigns()
       .then((res) => {
@@ -32,10 +58,10 @@ export function AdminDashboard() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [adminCheckLoading, isAdmin]);
 
   const handleVerify = async (campaignId: number) => {
-    if (!address || !ADMIN_WALLET || address.toLowerCase() !== ADMIN_WALLET) return;
+    if (!address || !isAdmin) return;
     setVerifyingId(campaignId);
     setError(null);
     try {
@@ -59,11 +85,26 @@ export function AdminDashboard() {
     );
   }
 
-  if (!ADMIN_WALLET || !isAdmin) {
+  if (adminCheckLoading) {
+    return (
+      <PageShell maxWidth="narrow">
+        <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Admin</h1>
+        <p className="mt-3 text-slate-600 dark:text-slate-400">Checking admin access…</p>
+      </PageShell>
+    );
+  }
+
+  if (!isAdmin) {
     return (
       <PageShell maxWidth="narrow">
         <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Admin</h1>
         <p className="mt-3 text-slate-600 dark:text-slate-400">You do not have permission to view this page.</p>
+        {adminStatus?.adminConfigured === false && (
+          <p className="mt-4 text-sm text-amber-800 dark:text-amber-200/90">
+            Admin is not configured on the API. Set <code className="rounded bg-slate-100 px-1 dark:bg-slate-800">ADMIN_WALLET</code> on the
+            backend to your wallet address (same value as in production env).
+          </p>
+        )}
       </PageShell>
     );
   }
