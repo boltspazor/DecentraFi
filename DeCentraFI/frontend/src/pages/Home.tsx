@@ -99,8 +99,9 @@ export function Home() {
             Fund ideas that matter — transparently, on Ethereum.
           </h1>
           <p className="mt-4 text-pretty text-base leading-relaxed text-slate-600 sm:text-lg dark:text-slate-400">
-            DecentraFI connects creators and backers with wallet-native flows. Create a campaign, contribute
-            with ETH, and track everything on Sepolia or mainnet.
+            DecentraFI connects creators and backers with wallet-native flows. On <strong>Sepolia</strong>, you fund
+            campaigns with <strong>test Sepolia ETH</strong> (free from faucets — not real money). Mainnet uses real
+            ETH.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link

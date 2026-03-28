@@ -8,6 +8,8 @@ import { getTransactionErrorMessage } from "../utils/errorMessages";
 import { recordWalletTransaction } from "../services/walletTransactions";
 import { getBlockExplorerTxUrl } from "../utils/blockExplorer";
 import { PageShell } from "../components/PageShell";
+import { SepoliaTestEthPanel } from "../components/SepoliaTestEthPanel";
+import { nativeCurrencyLabel } from "../utils/nativeCurrency";
 
 const SUPPORTED_CHAIN_IDS = [1, 11155111] as const;
 
@@ -132,7 +134,8 @@ export function CreateCampaign() {
       <p className="mt-2 text-slate-600 dark:text-slate-400">
         Deploy a new campaign contract and list it in the app.
       </p>
-      <div className="mt-8">
+      <div className="mt-8 space-y-6">
+      <SepoliaTestEthPanel />
 
       {successTxHash && (
         <div className="mb-4 p-4 rounded bg-green-50 text-green-800 border border-green-200 dark:bg-emerald-950/40 dark:text-emerald-200 dark:border-emerald-900/50" role="alert">
@@ -183,6 +186,7 @@ export function CreateCampaign() {
       )}
 
       <CampaignForm
+        currencyLabel={nativeCurrencyLabel(chainId)}
         onSubmit={(data) => {
           sessionStorage.setItem("decentrafi_create_form", JSON.stringify(data));
           handleSubmit(data);
@@ -192,7 +196,8 @@ export function CreateCampaign() {
 
       {canSubmit && (
         <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
-          You will be asked to confirm the transaction in MetaMask. Ensure you are on Sepolia (test) or Ethereum mainnet.
+          You will confirm a transaction in your wallet. On Sepolia, gas and campaign stakes use free test ETH from a
+          faucet — not real money.
         </p>
       )}
       </div>

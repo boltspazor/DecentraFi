@@ -41,6 +41,8 @@ vi.mock("wagmi", () => ({
     isConnected: true,
     chainId: 11155111,
   })),
+  useChainId: vi.fn(() => 11155111),
+  useBalance: vi.fn(() => ({ data: undefined, isLoading: false })),
   useSwitchChain: vi.fn(() => ({ switchChain: vi.fn() })),
 }));
 
@@ -253,9 +255,9 @@ describe("CampaignDetail", () => {
   it("rejects zero amount and shows error", async () => {
     renderCampaignDetail();
     await waitFor(() => {
-      expect(screen.getByLabelText(/amount \(eth\)/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/amount \(sepolia eth\)/i)).toBeInTheDocument();
     });
-    const input = screen.getByLabelText(/amount \(eth\)/i);
+    const input = screen.getByLabelText(/amount \(sepolia eth\)/i);
     fireEvent.change(input, { target: { value: "0" } });
     fireEvent.click(screen.getByRole("button", { name: /contribute/i }));
     await waitFor(() => {
@@ -266,9 +268,9 @@ describe("CampaignDetail", () => {
   it("rejects negative amount", async () => {
     renderCampaignDetail();
     await waitFor(() => {
-      expect(screen.getByLabelText(/amount \(eth\)/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/amount \(sepolia eth\)/i)).toBeInTheDocument();
     });
-    const input = screen.getByLabelText(/amount \(eth\)/i);
+    const input = screen.getByLabelText(/amount \(sepolia eth\)/i);
     fireEvent.change(input, { target: { value: "-1" } });
     fireEvent.click(screen.getByRole("button", { name: /contribute/i }));
     await waitFor(() => {
@@ -279,9 +281,9 @@ describe("CampaignDetail", () => {
   it("rejects invalid number", async () => {
     renderCampaignDetail();
     await waitFor(() => {
-      expect(screen.getByLabelText(/amount \(eth\)/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/amount \(sepolia eth\)/i)).toBeInTheDocument();
     });
-    const input = screen.getByLabelText(/amount \(eth\)/i);
+    const input = screen.getByLabelText(/amount \(sepolia eth\)/i);
     fireEvent.change(input, { target: { value: "abc" } });
     fireEvent.click(screen.getByRole("button", { name: /contribute/i }));
     await waitFor(() => {
@@ -443,7 +445,7 @@ describe("CampaignDetail", () => {
     await waitFor(() => {
       expect(screen.getByRole("heading", { name: /test campaign/i })).toBeInTheDocument();
     });
-    expect(screen.queryByLabelText(/amount \(eth\)/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/amount \(sepolia eth\)/i)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /contribute/i })).not.toBeInTheDocument();
   });
 
@@ -501,7 +503,7 @@ describe("CampaignDetail", () => {
     });
     expect(screen.getByText(/goal:/i)).toBeInTheDocument();
     expect(screen.getByText(/0% funded/)).toBeInTheDocument();
-    expect(screen.getByLabelText(/amount \(eth\)/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/amount \(sepolia eth\)/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /contribute/i })).toBeInTheDocument();
   });
 

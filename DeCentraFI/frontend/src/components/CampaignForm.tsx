@@ -12,11 +12,13 @@ export interface CampaignFormData {
 interface CampaignFormProps {
   onSubmit: (data: CampaignFormData) => void | Promise<void>;
   isSubmitting?: boolean;
+  /** e.g. "Sepolia ETH" on testnet, "ETH" on mainnet */
+  currencyLabel?: string;
 }
 
 const initialErrors: FieldErrors = {};
 
-export function CampaignForm({ onSubmit, isSubmitting = false }: CampaignFormProps) {
+export function CampaignForm({ onSubmit, isSubmitting = false, currencyLabel = "ETH" }: CampaignFormProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [goalEth, setGoalEth] = useState("");
@@ -93,7 +95,7 @@ export function CampaignForm({ onSubmit, isSubmitting = false }: CampaignFormPro
       </div>
       <div>
         <label htmlFor="goal" className="block text-sm font-medium text-gray-700 mb-1 dark:text-slate-300">
-          Goal (ETH)
+          Goal ({currencyLabel})
         </label>
         <input
           id="goal"

@@ -29,7 +29,9 @@ import { getBlockExplorerTxUrl } from "../utils/blockExplorer";
 import { SUPPORTED_CHAIN_IDS } from "../config/wagmiConfig";
 import { recordWalletTransaction } from "../services/walletTransactions";
 import { PageShell } from "../components/PageShell";
+import { SepoliaTestEthPanel } from "../components/SepoliaTestEthPanel";
 import { useTheme } from "../context/ThemeContext";
+import { nativeCurrencyLabel } from "../utils/nativeCurrency";
 
 function getChainName(chainId: number): string {
   switch (chainId) {
@@ -80,6 +82,7 @@ export function CampaignDetail() {
   const [nowSec, setNowSec] = useState<bigint>(() => BigInt(Math.floor(Date.now() / 1000)));
 
   const currentChainId = chainId ?? null;
+  const currencyLabel = nativeCurrencyLabel(currentChainId ?? undefined);
   const addressesByChain = campaignMeta?.addressesByChain ?? [];
   const campaignAddressForChain = useMemo(() => {
     if (!campaignMeta) return null;
@@ -509,12 +512,12 @@ export function CampaignDetail() {
 
       <div className="mb-6 rounded-2xl border border-slate-200/80 bg-gradient-to-br from-slate-50 to-white p-5 shadow-soft dark:border-slate-700/80 dark:from-slate-900/80 dark:to-slate-950/50 sm:p-6">
         <div className="flex justify-between text-sm mb-2 dark:text-slate-300">
-          <span>Goal: {goalEth} ETH</span>
-          <span>Raised: {raisedEth} ETH (this chain)</span>
+          <span>Goal: {goalEth} {currencyLabel}</span>
+          <span>Raised: {raisedEth} {currencyLabel} (this chain)</span>
         </div>
         {totalRaisedAllChainsWei !== "0" && (
           <p className="text-sm font-medium text-indigo-600 mb-1 dark:text-indigo-400">
-            Total funds (all chains): {totalRaisedAllChainsEth} ETH
+            Total funds (all chains): {totalRaisedAllChainsEth} ETH (native per chain)
           </p>
         )}
         <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden dark:bg-slate-800">
@@ -556,7 +559,7 @@ export function CampaignDetail() {
               <div>
                 <p className="text-gray-500 dark:text-slate-400">Total contributions</p>
                 <p className="font-semibold">
-                  {(Number(analytics.totalContributionsWei) / 1e18).toFixed(4)} ETH
+                  {(Number(analytics.totalContributionsWei) / 1e18).toFixed(4)} {currencyLabel}
                 </p>
               </div>
               <div>
@@ -566,7 +569,7 @@ export function CampaignDetail() {
               <div>
                 <p className="text-gray-500 dark:text-slate-400">Average donation</p>
                 <p className="font-semibold">
-                  {(Number(analytics.averageContributionWei) / 1e18).toFixed(4)} ETH
+                  {(Number(analytics.averageContributionWei) / 1e18).toFixed(4)} {currencyLabel}
                 </p>
               </div>
               <div>
@@ -590,7 +593,7 @@ export function CampaignDetail() {
                           tickFormatter={(v: number) => `${v.toFixed(2)}`}
                         />
                         <Tooltip
-                          formatter={(value: number) => [`${value.toFixed(4)} ETH`, "Cumulative"]}
+                          formatter={(value: number) => [`${value.toFixed(4)} ${currencyLabel}`, "Cumulative"]}
                           contentStyle={
                             theme === "dark"
                               ? { background: "#0f172a", border: "1px solid #334155", borderRadius: "8px" }
@@ -803,8 +806,8 @@ export function CampaignDetail() {
             {isStreamWithdrawPending ? "Withdrawing…" : "Withdraw streamed funds"}
           </button>
           <p className="text-xs text-gray-600 mt-2 dark:text-slate-400">
-            Claimable: {(Number(streamClaimableEstimated) / 1e18).toFixed(6)} ETH • Rate:{" "}
-            {(Number(streamRatePerSecond) / 1e18).toFixed(8)} ETH/s
+            Claimable: {(Number(streamClaimableEstimated) / 1e18).toFixed(6)} {currencyLabel} • Rate:{" "}
+            {(Number(streamRatePerSecond) / 1e18).toFixed(8)} {currencyLabel}/s
           </p>
           {streamWithdrawError && (
             <p className="mt-2 text-sm text-red-600">
@@ -838,7 +841,7 @@ export function CampaignDetail() {
             {isRefundPending ? "Claiming…" : "Claim refund"}
           </button>
           <p className="text-xs text-gray-600 mt-1 dark:text-slate-400">
-            Your contribution: {(Number(myContribution) / 1e18).toFixed(4)} ETH
+            Your contribution: {(Number(myContribution) / 1e18).toFixed(4)} {currencyLabel}
           </p>
           {refundError && (
             <p className="mt-2 text-sm text-red-600">{getTransactionErrorMessage(refundError)}</p>
@@ -849,6 +852,9 @@ export function CampaignDetail() {
       {!closed && !isExpired && (
         <div className="mb-8 p-4 border border-gray-200 rounded-lg dark:border-slate-700 dark:bg-slate-900/40">
           <h2 className="text-lg font-semibold mb-3 dark:text-white">Contribute</h2>
+          <div className="mb-4">
+            <SepoliaTestEthPanel />
+          </div>
           {!isConnected && (
             <p className="text-amber-700 mb-3 dark:text-amber-300">Connect your wallet to contribute.</p>
           )}
@@ -873,7 +879,7 @@ export function CampaignDetail() {
           <form onSubmit={handleContribute} className="flex flex-wrap items-end gap-3">
             <div>
               <label htmlFor="amount" className="block text-sm font-medium text-gray-700 mb-1 dark:text-slate-300">
-                Amount (ETH)
+                Amount ({currencyLabel})
               </label>
               <input
                 id="amount"
@@ -915,7 +921,10 @@ export function CampaignDetail() {
                 <span className="font-mono">
                   {c.contributorAddress.slice(0, 6)}…{c.contributorAddress.slice(-4)}
                 </span>
-                <span>{(Number(c.amountWei) / 1e18).toFixed(4)} ETH</span>
+                <span>
+                  {(Number(c.amountWei) / 1e18).toFixed(4)}{" "}
+                  {nativeCurrencyLabel(c.chainId ?? currentChainId ?? undefined)}
+                </span>
                 {c.txHash && (
                   <a
                     href={getBlockExplorerTxUrl(c.chainId ?? 1, c.txHash)}

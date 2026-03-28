@@ -20,6 +20,8 @@ vi.mock("wagmi", () => ({
     isConnected: true,
     chainId: 11155111,
   })),
+  useChainId: vi.fn(() => 11155111),
+  useBalance: vi.fn(() => ({ data: undefined, isLoading: false })),
   useSwitchChain: vi.fn(() => ({ switchChain: vi.fn(), isPending: false })),
 }));
 
